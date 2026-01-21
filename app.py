@@ -529,9 +529,9 @@ elif page == "7. Generate Predictions":
                     elif fuel_type == 'Diesel':
                         targets = [('Diesel', 'Diesel')]
                     elif fuel_type == 'Turbine':
-                        targets = [('CNG', 'CNG')]
+                        targets = [('Turbine', 'CNG')]
                     elif fuel_type == 'DGB':
-                        targets = [('Diesel', 'Diesel'), ('CNG', 'CNG')]
+                        targets = [('DGB_Diesel', 'Diesel'), ('DGB_CNG', 'CNG')]
                     else:
                         targets = [('Grid', 'Grid')]
                     
