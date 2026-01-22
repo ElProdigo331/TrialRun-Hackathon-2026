@@ -11,6 +11,8 @@ This is a complete machine learning workflow application for the Energy AI Hacka
 3. Open the Webview to access the application
 
 ### Option 2: Run Locally
+**Requires: Python 3.11+**
+
 ```bash
 # Install dependencies
 pip install streamlit pandas numpy scikit-learn matplotlib seaborn plotly
