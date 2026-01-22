@@ -18,8 +18,10 @@ This is a complete machine learning workflow application for the Energy AI Hacka
 pip install streamlit pandas numpy scikit-learn matplotlib seaborn plotly
 
 # Run the application
-streamlit run app.py --server.port 5000
+python -m streamlit run app.py --server.port 5000
 ```
+
+Then open your browser to: **http://localhost:5000**
 
 ## How to Use the App
 
