@@ -3,7 +3,7 @@
 ## SLIDE 1: Title
 **Energy Usage Prediction for Hydraulic Fracturing Operations**
 
-[TEAM NAME]
+Energy Gladiators
 
 Team Members:
 - [Member 1] - [Affiliation]
