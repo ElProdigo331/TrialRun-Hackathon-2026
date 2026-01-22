@@ -21,25 +21,27 @@
 - [x] Correct fuel type labels (Grid, Diesel, Turbine, DGB_Diesel, DGB_CNG)
 - [ ] Regenerate with 2026 data when available
 
-### 2. TeamName.ipynb ❌ NEEDS WORK
-- [ ] Rename to actual team name
-- [ ] Follow hackathon template structure
-- [ ] Add markdown explanations for each section
-- [ ] Include visualizations (actual vs predicted, feature importance)
-- [ ] Add introduction and conclusion sections
-- [ ] Document methodology decisions
-- [ ] Ensure runs start-to-finish without errors
+### 2. TeamName.ipynb ⚠️ TEMPLATE READY (Needs 2026 Data)
+- [ ] **CRITICAL: Rename file to `<TeamName>.ipynb`** (exact team name from registration)
+- [ ] **CRITICAL: Match Hackathon_ProjectTemplate.ipynb structure exactly**
+- [x] Markdown explanations for each section
+- [x] Visualizations code ready (actual vs predicted, feature importance)
+- [x] Introduction and conclusion sections
+- [x] Methodology decisions documented
+- [ ] Fill in 2026 results when data arrives
+- [ ] Test runs start-to-finish without errors
 
-### 3. TeamName.pptx ❌ NOT STARTED
-- [ ] Create using official template
-- [ ] Slide 1: Title + ALL team member names
-- [ ] Slide 2: Problem statement
-- [ ] Slide 3: Dataset overview & challenges
-- [ ] Slides 4-5: Methodology (separate models, uncertainty approach)
-- [ ] Slides 6-7: Results (accuracy metrics, feature importance chart)
-- [ ] Slide 8: Uncertainty interpretation
-- [ ] Slide 9: Conclusions & real-world impact
-- [ ] Backup slides for Q&A
+### 3. TeamName.pptx ⚠️ OUTLINE READY (Needs 2026 Data)
+- [ ] **CRITICAL: Use official Hackathon_PresentationTemplate.pptx as base**
+- [ ] **CRITICAL: Rename file to `<TeamName>.pptx`** (exact team name)
+- [ ] Slide 1: Title + **ALL team member full names** (REQUIRED)
+- [x] Slide 2: Problem statement (content ready in outline)
+- [x] Slide 3: Dataset overview & challenges (content ready)
+- [x] Slides 4-5: Methodology - separate models, uncertainty (content ready)
+- [ ] Slides 6-7: Results (fill with 2026 accuracy metrics, charts)
+- [x] Slide 8: Uncertainty interpretation (content ready)
+- [x] Slide 9: Conclusions & real-world impact (content ready)
+- [x] Backup slides outlined for Q&A
 
 ### 4. README.md ✅ READY
 - [x] Project description
@@ -85,13 +87,27 @@
 
 ## Pre-Submission Checklist (Final Day)
 
-- [ ] Team name matches across all files
-- [ ] solution.csv has exact required format (no index column)
+### File Naming (CRITICAL - Will Be Rejected If Wrong)
+- [ ] Notebook renamed to `<TeamName>.ipynb` (exact registered team name)
+- [ ] Presentation renamed to `<TeamName>.pptx` (exact registered team name)
+- [ ] solution.csv named exactly `solution.csv` (no changes)
+
+### Format Compliance
+- [ ] solution.csv has exact required columns (no extra columns, no index)
+- [ ] solution.csv has exactly 63 rows (or correct count for 2026 data)
+- [ ] Notebook follows Hackathon_ProjectTemplate.ipynb structure
+- [ ] Presentation uses Hackathon_PresentationTemplate.pptx styling
+
+### Content Verification
+- [ ] All team member FULL NAMES on presentation title slide
 - [ ] Notebook runs start-to-finish without errors
-- [ ] All team member names on presentation title slide
-- [ ] Files committed to hackathon GitHub repo
-- [ ] Push before noon deadline
-- [ ] Practice presentation timing
+- [ ] All 100 uncertainty realizations present in solution.csv
+
+### Submission
+- [ ] All files committed to hackathon GitHub repo (not personal repo)
+- [ ] Push BEFORE noon deadline
+- [ ] Verify files appear correctly on GitHub
+- [ ] Practice presentation timing (~10 minutes)
 
 ---
 
