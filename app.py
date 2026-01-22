@@ -458,10 +458,17 @@ elif page == "6. Uncertainty Quantification":
         
         For each prediction, we:
         1. Generate a point estimate using the trained model
-        2. Sample 100 residuals from training with replacement
-        3. Add sampled residuals to create 100 realizations
+        2. Sample 100 residuals from training with replacement (using `random_state=42` for reproducibility)
+        3. Add sampled residuals to create 100 realizations (R_1 through R_100)
         
-        This captures model uncertainty and data variability.
+        **Why Residual Bootstrapping?**
+        - Captures both model uncertainty and inherent data variability
+        - Non-parametric approach - makes no assumptions about error distribution
+        - Preserves the empirical error structure from cross-validation
+        - Ensures predictions reflect realistic ranges based on training performance
+        
+        **Reproducibility:** All random operations use `random_state=42` to ensure 
+        identical results when re-running the pipeline.
         """)
         
         st.subheader("Residual Distributions")
@@ -500,6 +507,7 @@ elif page == "7. Generate Predictions":
             n_realizations = st.slider("Number of Realizations", 10, 100, 100)
             
             if st.button("Generate Predictions", type="primary"):
+                np.random.seed(42)
                 X_test = test_df.copy()
                 
                 feature_cols = st.session_state.feature_cols

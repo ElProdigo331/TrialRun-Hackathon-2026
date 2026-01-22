@@ -1,7 +1,12 @@
 # Energy AI Hackathon 2026 - ML Workflow Application
 
+**Team:** Energy Gladiators
+
 ## Overview
 This is a complete machine learning workflow application for the Energy AI Hackathon. It provides an interactive Streamlit interface to predict energy usage (Grid kWh, Diesel gal, CNG MMBTU) for hydraulic fracturing operations, including uncertainty quantification with 100 realizations per prediction.
+
+## Problem Statement
+Predict Grid (kWh), Diesel (gal), and CNG (MMBTU) energy usage per well during hydraulic fracturing operations. Output includes point estimates plus 100 uncertainty realizations (R_1 to R_100) per prediction.
 
 ## Quick Start
 
@@ -118,10 +123,28 @@ The output CSV follows hackathon submission requirements:
 
 ## Modeling Approach
 
-1. **Random Forest Regressor** - Robust, handles mixed features
+1. **Random Forest Regressor** - Robust, handles mixed features (`random_state=42` for reproducibility)
 2. **Cross-Validation** - 5-fold CV for reliable performance estimation
 3. **Residual Bootstrapping** - Sample residuals to generate 100 uncertainty realizations
 4. **Separate Models per Target** - Grid, Diesel, and CNG each have dedicated models
+
+## Uncertainty Methodology
+
+**Method: Residual Bootstrapping**
+
+For each test well prediction, we:
+1. Generate a point estimate using the trained Random Forest model
+2. Sample 100 residuals from training data with replacement (`random_state=42`)
+3. Add sampled residuals to the point estimate to create 100 realizations (R_1...R_100)
+4. Apply floor of 0 to ensure non-negative energy values
+
+**Why Residual Bootstrapping?**
+- Captures both model uncertainty and inherent data variability
+- Non-parametric approach - makes no assumptions about error distribution
+- Preserves the empirical error structure from cross-validation
+- Ensures predictions reflect realistic ranges based on training performance
+
+**Reproducibility:** All random operations use `random_state=42` to ensure identical results when re-running the pipeline.
 
 ## For 2026 Hackathon
 
