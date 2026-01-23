@@ -13,6 +13,14 @@ import os
 import warnings
 warnings.filterwarnings('ignore')
 
+from openai import OpenAI
+
+def get_openai_client():
+    return OpenAI(
+        api_key=os.environ.get("AI_INTEGRATIONS_OPENAI_API_KEY"),
+        base_url=os.environ.get("AI_INTEGRATIONS_OPENAI_BASE_URL")
+    )
+
 st.set_page_config(
     page_title="Energy AI Hackathon Workflow",
     page_icon="⚡",
@@ -49,7 +57,8 @@ pages = [
     "5. Model Training",
     "6. Uncertainty Quantification",
     "7. Generate Predictions",
-    "8. Hackathon Quick Start"
+    "8. Hackathon Quick Start",
+    "9. AI ML Assistant"
 ]
 
 page = sidebar.radio("Select Step:", pages)
@@ -643,6 +652,165 @@ elif page == "8. Hackathon Quick Start":
         st.success(f"Predictions generated: {len(st.session_state.predictions)} rows")
     else:
         st.info("No predictions generated yet.")
+
+elif page == "9. AI ML Assistant":
+    st.header("AI-Powered ML Assistant")
+    
+    st.markdown("""
+    **Ask me anything about machine learning, data science, or how to adapt this pipeline!**
+    
+    I can help you with:
+    - Suggesting features for your specific dataset
+    - Recommending ML models for different problem types
+    - Explaining uncertainty quantification methods
+    - Adapting this pipeline to different industries
+    - Troubleshooting model performance issues
+    - Understanding your data patterns
+    """)
+    
+    if 'chat_messages' not in st.session_state:
+        st.session_state.chat_messages = []
+    
+    def get_data_context():
+        context_parts = []
+        
+        if st.session_state.train_df is not None:
+            df = st.session_state.train_df
+            context_parts.append(f"LOADED TRAINING DATA: {len(df)} rows, {len(df.columns)} columns")
+            context_parts.append(f"Columns: {', '.join(df.columns.tolist())}")
+            context_parts.append(f"Numeric columns: {', '.join(df.select_dtypes(include=[np.number]).columns.tolist())}")
+            context_parts.append(f"Categorical columns: {', '.join(df.select_dtypes(include=['object']).columns.tolist())}")
+            
+            if 'Fuel Type' in df.columns:
+                context_parts.append(f"Fuel Types: {df['Fuel Type'].value_counts().to_dict()}")
+            
+            missing = df.isnull().sum()
+            missing = missing[missing > 0]
+            if len(missing) > 0:
+                context_parts.append(f"Missing values: {missing.to_dict()}")
+        
+        if st.session_state.test_df is not None:
+            context_parts.append(f"TEST DATA: {len(st.session_state.test_df)} wells to predict")
+        
+        if st.session_state.models:
+            context_parts.append(f"TRAINED MODELS: {list(st.session_state.models.keys())}")
+            for target, residuals in st.session_state.residuals.items():
+                context_parts.append(f"{target} residual std: {np.std(residuals):.2f}")
+        
+        if st.session_state.predictions is not None:
+            context_parts.append(f"PREDICTIONS: {len(st.session_state.predictions)} rows generated")
+        
+        return "\n".join(context_parts) if context_parts else "No data loaded yet."
+    
+    def get_system_prompt():
+        data_context = get_data_context()
+        
+        return f"""You are an expert ML assistant integrated into a machine learning pipeline application. 
+Your role is to help users adapt this pipeline to ANY dataset, industry, or problem type.
+
+CURRENT APPLICATION STATE:
+{data_context}
+
+CURRENT PIPELINE CAPABILITIES:
+- Data loading and inspection
+- Missing value imputation (median for numeric, mode for categorical)
+- Exploratory data analysis with visualizations
+- Feature engineering (derived features from existing columns)
+- Random Forest model training with cross-validation
+- Residual bootstrapping for uncertainty quantification (100 realizations)
+- Prediction generation with uncertainty bounds
+
+YOUR EXPERTISE INCLUDES:
+1. MODEL SELECTION: Random Forest, XGBoost, LightGBM, Neural Networks, Linear Models, SVR, etc.
+2. FEATURE ENGINEERING: Domain-specific features, interactions, polynomial features, time-based features
+3. UNCERTAINTY METHODS: Bootstrapping, Monte Carlo dropout, Bayesian approaches, quantile regression
+4. DATA PREPROCESSING: Scaling, encoding, outlier handling, missing value strategies
+5. PROBLEM TYPES: Regression, classification, time series, anomaly detection
+6. INDUSTRIES: Energy, finance, healthcare, manufacturing, retail, and more
+
+When users ask about adapting the pipeline:
+- Explain what changes would be needed
+- Suggest specific features or models for their use case
+- Provide code snippets when helpful
+- Consider the trade-offs between accuracy, interpretability, and speed
+
+Be concise but thorough. Use bullet points for clarity. If data is loaded, reference specific columns and patterns you observe."""
+
+    for message in st.session_state.chat_messages:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
+    
+    if prompt := st.chat_input("Ask me about ML, features, models, or how to adapt this pipeline..."):
+        st.session_state.chat_messages.append({"role": "user", "content": prompt})
+        with st.chat_message("user"):
+            st.markdown(prompt)
+        
+        with st.chat_message("assistant"):
+            with st.spinner("Thinking..."):
+                try:
+                    client = get_openai_client()
+                    
+                    messages = [{"role": "system", "content": get_system_prompt()}]
+                    for msg in st.session_state.chat_messages[-10:]:
+                        messages.append({"role": msg["role"], "content": msg["content"]})
+                    
+                    response = client.chat.completions.create(
+                        model="gpt-4o",
+                        messages=messages,
+                        max_tokens=2000,
+                        temperature=0.7
+                    )
+                    
+                    assistant_response = response.choices[0].message.content
+                    st.markdown(assistant_response)
+                    st.session_state.chat_messages.append({"role": "assistant", "content": assistant_response})
+                    
+                except Exception as e:
+                    error_msg = f"Error: {str(e)}"
+                    st.error(error_msg)
+    
+    with st.expander("Quick Prompts - Click to Use"):
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("**Data & Features:**")
+            prompts1 = [
+                "What features should I engineer from my current data?",
+                "How can I handle missing values better?",
+                "What patterns do you see in my data?",
+                "How should I encode my categorical variables?"
+            ]
+            for p in prompts1:
+                if st.button(p, key=f"p1_{p[:20]}"):
+                    st.session_state.pending_prompt = p
+                    st.rerun()
+        
+        with col2:
+            st.markdown("**Models & Methods:**")
+            prompts2 = [
+                "What ML models would work better for this problem?",
+                "How can I improve my uncertainty quantification?",
+                "Should I use ensemble methods?",
+                "How do I adapt this for a classification problem?"
+            ]
+            for p in prompts2:
+                if st.button(p, key=f"p2_{p[:20]}"):
+                    st.session_state.pending_prompt = p
+                    st.rerun()
+    
+    if 'pending_prompt' in st.session_state:
+        prompt = st.session_state.pending_prompt
+        del st.session_state.pending_prompt
+        st.session_state.chat_messages.append({"role": "user", "content": prompt})
+        st.rerun()
+    
+    if st.button("Clear Chat History"):
+        st.session_state.chat_messages = []
+        st.rerun()
+    
+    st.markdown("---")
+    st.markdown("**Current Data Context:**")
+    st.code(get_data_context(), language="text")
 
 st.sidebar.markdown("---")
 st.sidebar.markdown("**Energy AI Hackathon 2026**")

@@ -3,6 +3,8 @@
 ## Overview
 This is a comprehensive Streamlit-based machine learning workflow application designed for the Energy AI Hackathon. It provides an end-to-end pipeline for predicting energy usage (Grid kWh, Diesel gal, CNG MMBTU) during hydraulic fracturing operations.
 
+**NEW: AI-Powered ML Assistant** - Integrated chat interface that can help adapt the pipeline to ANY dataset, industry, or problem type. Uses natural language to suggest features, recommend models, and troubleshoot issues.
+
 ## Project Goal
 Predict energy consumption for 50 wells with:
 - Point estimates for each target (Grid, Diesel, CNG)
@@ -34,7 +36,7 @@ streamlit run app.py --server.port 5000
 
 ## Application Features
 
-### 8-Step Workflow:
+### 9-Step Workflow:
 1. **Data Upload & Inspection** - Load training/test data, view statistics
 2. **Data Cleaning & Imputation** - Handle missing values
 3. **Exploratory Data Analysis** - Visualize distributions, correlations
@@ -43,6 +45,7 @@ streamlit run app.py --server.port 5000
 6. **Uncertainty Quantification** - Residual bootstrapping analysis
 7. **Generate Predictions** - Create solution file with 100 realizations
 8. **Quick Start Guide** - Instructions for 2026 hackathon
+9. **AI ML Assistant** - Chat interface for ML guidance and pipeline adaptation
 
 ## Modeling Strategy
 
