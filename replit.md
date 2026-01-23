@@ -1,5 +1,13 @@
 # Energy AI Hackathon 2026 Workflow Application
 
+## REMINDER FOR NEXT SESSION (Jan 24, 2026)
+- [ ] Check project visibility settings (Public vs Private) - ensure it's PRIVATE
+- [ ] Check if anyone besides the owner has accessed/logged into this project
+- [ ] Do a FULL DRY RUN: Start fresh project, use recipe zip, follow strategy guide
+- [ ] Time each phase to know how long the real hackathon will take
+
+---
+
 ## Overview
 This is a comprehensive Streamlit-based machine learning workflow application designed for the Energy AI Hackathon. It provides an end-to-end pipeline for predicting energy usage (Grid kWh, Diesel gal, CNG MMBTU) during hydraulic fracturing operations.
 
