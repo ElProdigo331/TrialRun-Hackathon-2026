@@ -16,7 +16,7 @@
 
 ### 1. solution.csv ✅ READY
 - [x] 63 rows (50 wells, DGB wells have 2 rows)
-- [x] Columns: Masked Well Name, Fuel Type, Fuel Value, R_1...R_100
+- [x] Columns: Masked Well Name, Fuel Type, Fuel Value, Real_1...Real_100
 - [x] 100 uncertainty realizations per prediction
 - [x] Correct fuel type labels (Grid, Diesel, Turbine, DGB_Diesel, DGB_CNG)
 - [ ] Regenerate with 2026 data when available

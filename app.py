@@ -468,7 +468,7 @@ elif page == "6. Uncertainty Quantification":
         For each prediction, we:
         1. Generate a point estimate using the trained model
         2. Sample 100 residuals from training with replacement (using `random_state=42` for reproducibility)
-        3. Add sampled residuals to create 100 realizations (R_1 through R_100)
+        3. Add sampled residuals to create 100 realizations (Real_1 through Real_100)
         
         **Why Residual Bootstrapping?**
         - Captures both model uncertainty and inherent data variability
@@ -569,7 +569,7 @@ elif page == "7. Generate Predictions":
                                 'Fuel Value': max(0, point_estimate)
                             }
                             for r in range(n_realizations):
-                                result[f'R_{r+1}'] = realizations[r]
+                                result[f'Real_{r+1}'] = realizations[r]
                             
                             results.append(result)
                     
@@ -581,7 +581,7 @@ elif page == "7. Generate Predictions":
                 st.success(f"Generated {len(predictions_df)} prediction rows!")
                 
                 st.subheader("Predictions Preview")
-                display_cols = ['Masked Well Name', 'Fuel Type', 'Fuel Value', 'R_1', 'R_2', 'R_3', 'R_4', 'R_5']
+                display_cols = ['Masked Well Name', 'Fuel Type', 'Fuel Value', 'Real_1', 'Real_2', 'Real_3', 'Real_4', 'Real_5']
                 st.dataframe(predictions_df[display_cols].head(20), use_container_width=True)
                 
                 csv = predictions_df.to_csv(index=False)

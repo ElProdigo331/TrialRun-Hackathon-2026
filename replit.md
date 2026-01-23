@@ -89,4 +89,4 @@ Residual bootstrapping - sample 100 residuals with replacement and add to point 
 | Masked Well Name | Well identifier |
 | Fuel Type | Grid, Diesel, or CNG |
 | Fuel Value | Point estimate |
-| R_1 through R_100 | 100 uncertainty realizations |
+| Real_1 through Real_100 | 100 uncertainty realizations |
