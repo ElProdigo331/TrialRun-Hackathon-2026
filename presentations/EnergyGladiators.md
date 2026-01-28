@@ -153,17 +153,42 @@ This provides operators with:
 
 ---
 
-## SLIDE 10: Conclusions & Impact
+## SLIDE 10: Innovation - Beyond Commercial Tools
+
+**Why This Matters: Commercial Tools Can't Do This**
+
+> *"Commercial tools like Spotfire cost thousands per year and only show historical data. Our solution predicts future energy usage with uncertainty quantification - something even enterprise tools don't do. And our AI assistant means any engineer can adapt it to new problems without coding."*
+
+| Aspect | Commercial BI Tools (Spotfire, Tableau) | Our Solution |
+|--------|----------------------------------------|--------------|
+| **Approach** | Descriptive (what happened) | **Predictive** (what will happen) |
+| **Output** | Charts & dashboards | Point estimates + uncertainty ranges |
+| **Cost** | $3,000-5,000/year license | Free (Python/Streamlit) |
+| **Adaptability** | Fixed features | **AI assistant adapts to any dataset** |
+| **Skill Value** | Vendor lock-in | Portable Python/ML skills |
+| **Innovation** | Standard BI | **Novel ML + uncertainty quantification** |
+
+**The Key Differentiator:**
+- Spotfire tells you *"here's what your energy consumption was"*
+- Our tool tells you *"here's what it will be, and here's how confident we are"*
+
+That's the difference between a **reporting tool** and an **intelligence tool**.
+
+---
+
+## SLIDE 11: Conclusions & Impact
 
 **What We Built**
 - Complete ML pipeline for energy prediction
 - Separate models respecting domain logic
 - Robust uncertainty quantification
+- **AI-powered assistant for adaptability**
 
 **Real-World Value**
 - **Cost Savings**: Avoid over-ordering fuel
 - **Reliability**: Don't run short during operations
 - **Planning**: Confidence intervals for logistics
+- **Accessibility**: Engineers can use it without coding
 
 **Future Improvements**
 - Ensemble methods (XGBoost, Neural Networks)

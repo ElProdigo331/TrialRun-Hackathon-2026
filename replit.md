@@ -75,6 +75,23 @@ streamlit run app.py --server.port 5000
 ### Uncertainty Method:
 Residual bootstrapping - sample 100 residuals with replacement and add to point estimates.
 
+## Value Proposition - Key Talking Points
+
+**Why Our Solution Beats Commercial Tools (Spotfire, Tableau, Power BI):**
+
+> *"Commercial tools like Spotfire cost thousands per year and only show historical data. Our solution predicts future energy usage with uncertainty quantification - something even enterprise tools don't do. And our AI assistant means any engineer can adapt it to new problems without coding."*
+
+| Commercial BI Tools | Our Solution |
+|---------------------|--------------|
+| Descriptive (what happened) | **Predictive** (what will happen) |
+| Charts & dashboards | Point estimates + uncertainty ranges |
+| $3,000-5,000/year license | Free (Python/Streamlit) |
+| Vendor lock-in | Portable Python/ML skills |
+
+**The Key Differentiator:**
+- Spotfire = **Reporting tool** ("here's what your energy consumption was")
+- Our solution = **Intelligence tool** ("here's what it will be, and how confident we are")
+
 ## For 2026 Hackathon Adaptation
 
 1. Upload new training/test data files
