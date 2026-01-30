@@ -1,6 +1,6 @@
 # ENERGY GLADIATORS - HACKATHON STRATEGY GUIDE
 
-## ⚠️ FOR YOUR EYES ONLY - DO NOT SHARE OR INCLUDE IN SUBMISSION ⚠️
+## [CONFIDENTIAL] FOR YOUR EYES ONLY - DO NOT SHARE OR INCLUDE IN SUBMISSION
 
 ---
 
@@ -8,45 +8,45 @@
 
 | When | What to Do |
 |------|------------|
-| **Friday 5pm** | Kickoff - receive 2026 dataset + GitHub repo access |
-| **Friday Night** | Clone official repo, start fresh project, upload recipe zip as REFERENCE only |
-| **Saturday (Full Day)** | MAIN BUILD DAY - rebuild pipeline fresh, use AI Assistant live, document everything |
-| **Saturday Night** | Polish notebook & slides, transfer to official templates, practice presentation |
-| **Sunday AM** | Final push to GitHub by NOON, triple-check file names, practice timing (~10 min) |
-| **Sunday PM** | Presentations to judges, be ready for Q&A |
+| Friday 5pm | Kickoff - receive 2026 dataset + GitHub repo access |
+| Friday Night | Clone official repo, start fresh project, upload recipe zip as REFERENCE only |
+| Saturday (Full Day) | MAIN BUILD DAY - rebuild pipeline fresh, use AI Assistant live, document everything |
+| Saturday Night | Polish notebook and slides, transfer to official templates, practice presentation |
+| Sunday AM | Final push to GitHub by NOON, triple-check file names, practice timing (about 10 min) |
+| Sunday PM | Presentations to judges, be ready for Q&A |
 
 ---
 
 ## 2. STEP-BY-STEP EXECUTION PLAN
 
-### Phase 1: Setup (Friday Night, ~30 min)
+### Phase 1: Setup (Friday Night, about 30 min)
 - Clone official hackathon GitHub repo (NOT your personal repo)
 - Upload recipe zip as a REFERENCE - DO NOT copy-paste code directly
 - Start a NEW app.py - rebuild the structure from scratch
 - This creates commit history showing genuine development
 
-### Phase 2: Data Exploration (Friday Night → Saturday AM)
+### Phase 2: Data Exploration (Friday Night to Saturday AM)
 - Upload NEW 2026 training/test data
 - Use AI Assistant: "What patterns do you see in this data?"
 - Document findings in notebook with markdown
 - Create visualizations (histograms, box plots, correlation heatmap)
 
-### Phase 3: Build & Adapt (Saturday)
+### Phase 3: Build and Adapt (Saturday)
 - Rebuild pipeline using recipe as guide (9 steps)
 - Ask AI Assistant: "What features should I engineer?"
 - Ask AI Assistant: "Would a different model work better?"
-- DOCUMENT these AI conversations - show judges you're exploring
+- DOCUMENT these AI conversations - show judges you are exploring
 
 ### Phase 4: Polish (Saturday Night)
 - Transfer work to official Jupyter notebook template
-- Rename to `EnergyGladiators.ipynb`
+- Rename to EnergyGladiators.ipynb
 - Add markdown explanations at EVERY step
 - Create slides using official PowerPoint template
 - ALL team member names on slide 1 (REQUIRED)
 
 ### Phase 5: Submission (Sunday AM)
 - Generate solution.csv with 100 realizations
-- VERIFY: Columns are `Real_1` through `Real_100` (not R_1)
+- VERIFY: Columns are Real_1 through Real_100 (not R_1)
 - Push everything to official GitHub repo
 - Final commit BEFORE noon deadline
 - Push 30 minutes early for safety buffer
@@ -67,22 +67,23 @@
 | 8. Quick Start | Reference instructions | - |
 | 9. AI Assistant | Ask questions, get help | Ongoing |
 
-**Total workflow time: ~30 minutes once familiar**
+Total workflow time: About 30 minutes once familiar
 
 ---
 
 ## 4. CRITICAL DOMAIN KNOWLEDGE
 
-### Fleet Type → Fuel Mapping
+### Fleet Type to Fuel Mapping
+
 | Fleet Type | Uses Grid | Uses Diesel | Uses CNG |
 |------------|-----------|-------------|----------|
-| Grid       | ✅ Yes    | ❌ No       | ❌ No    |
-| Diesel     | ❌ No     | ✅ Yes      | ❌ No    |
-| Turbine    | ❌ No     | ❌ No       | ✅ Yes   |
-| DGB        | ❌ No     | ✅ Yes      | ✅ Yes   |
+| Grid       | YES       | NO          | NO       |
+| Diesel     | NO        | YES         | NO       |
+| Turbine    | NO        | NO          | YES      |
+| DGB        | NO        | YES         | YES      |
 
-**Key Insight:** DGB (Dual-fuel) wells generate TWO output rows (one Diesel, one CNG).  
-50 wells → 63 rows in solution.csv (13 DGB wells × 2 = 26, plus 37 single-fuel wells)
+Key Insight: DGB (Dual-fuel) wells generate TWO output rows (one Diesel, one CNG).
+50 wells become 63 rows in solution.csv (13 DGB wells x 2 = 26, plus 37 single-fuel wells)
 
 ---
 
@@ -90,24 +91,25 @@
 
 ### Why Our Solution Beats Commercial Tools
 
-> **"Commercial tools like Spotfire cost thousands per year and only show historical data. Our solution predicts future energy usage with uncertainty quantification - something even enterprise tools don't do. And our AI assistant means any engineer can adapt it to new problems without coding."**
+"Commercial tools like Spotfire cost thousands per year and only show historical data. Our solution predicts future energy usage with uncertainty quantification - something even enterprise tools do not do. And our AI assistant means any engineer can adapt it to new problems without coding."
 
 | Aspect | Commercial BI (Spotfire, Tableau) | Our Solution |
 |--------|-----------------------------------|--------------|
-| **Approach** | Descriptive (what happened) | **Predictive** (what will happen) |
-| **Output** | Charts & dashboards | Point estimates + uncertainty ranges |
-| **Cost** | $3,000-5,000/year license | Free (Python/Streamlit) |
-| **Adaptability** | Fixed features | **AI assistant adapts to any dataset** |
-| **Skill Value** | Vendor lock-in | Portable Python/ML skills |
+| Approach | Descriptive (what happened) | PREDICTIVE (what will happen) |
+| Output | Charts and dashboards | Point estimates + uncertainty ranges |
+| Cost | $3,000-5,000/year license | Free (Python/Streamlit) |
+| Adaptability | Fixed features | AI assistant adapts to any dataset |
+| Skill Value | Vendor lock-in | Portable Python/ML skills |
 
-**The Key Differentiator:**
-- Spotfire = Reporting tool ("here's what your energy consumption was")
-- Our solution = Intelligence tool ("here's what it will be, and how confident we are")
+The Key Differentiator:
+- Spotfire = Reporting tool ("here is what your energy consumption was")
+- Our solution = Intelligence tool ("here is what it will be, and how confident we are")
 
 ### Innovation Story for Judges
-"We didn't just build a model for the 2026 hackathon problem. We built a platform that can solve FUTURE problems. Ask it anything..."
 
-**Then do a LIVE DEMO** - type a question like "What features would you suggest for this dataset?" and watch it respond.
+"We did not just build a model for the 2026 hackathon problem. We built a platform that can solve FUTURE problems. Ask it anything..."
+
+Then do a LIVE DEMO - type a question like "What features would you suggest for this dataset?" and watch it respond.
 
 ---
 
@@ -152,32 +154,32 @@ The AI Assistant (Step 9) can now help with:
 
 | Requirement | Status | Action |
 |-------------|--------|--------|
-| Develop during hackathon | ✅ | Rebuild fresh using recipe as guide |
-| Use only 2026 official data | ✅ | Train on new data only |
-| solution.csv format | ⚠️ VERIFY | Columns = Real_1 to Real_100 (not R_1) |
-| Notebook = TeamName.ipynb | ✅ | Rename to EnergyGladiators.ipynb |
-| Slides = TeamName.pptx | ✅ | All members on slide 1 |
-| Push to official GitHub | ✅ | Use THEIR repo, not yours |
-| 100 realizations | ✅ | Already implemented |
-| Deadline: Noon Sunday | ✅ | Push 30 min early for safety |
+| Develop during hackathon | DONE | Rebuild fresh using recipe as guide |
+| Use only 2026 official data | DONE | Train on new data only |
+| solution.csv format | VERIFY! | Columns = Real_1 to Real_100 (not R_1) |
+| Notebook = TeamName.ipynb | DONE | Rename to EnergyGladiators.ipynb |
+| Slides = TeamName.pptx | DONE | All members on slide 1 |
+| Push to official GitHub | DONE | Use THEIR repo, not yours |
+| 100 realizations | DONE | Already implemented |
+| Deadline: Noon Sunday | DONE | Push 30 min early for safety |
 
 ---
 
 ## 9. FINAL REMINDERS
 
-### ❌ DO NOT:
+### DO NOT:
 - Copy-paste code from recipe (looks like pre-work)
 - Use 2025 data for training (only 2026 official data)
 - Forget team member names on slide 1
 - Push to personal repo instead of official hackathon repo
 - Include this PDF in any submission
 
-### ✅ DO:
+### DO:
 - Rebuild pipeline fresh - use recipe as reference only
 - Use AI Assistant LIVE during hackathon (innovation demo)
 - Document your thought process in notebook markdown
 - Create commit history showing genuine development
-- Practice your presentation (aim for ~10 minutes)
+- Practice your presentation (aim for about 10 minutes)
 - Demo the AI Assistant answering a live question
 
 ---
@@ -197,16 +199,16 @@ The AI Assistant (Step 9) can now help with:
 
 ## 11. QUICK REFERENCE - PRESENTATION TALKING POINTS
 
-**Opening:**
-> "We're Team Energy Gladiators. We built an intelligent ML system that predicts energy consumption for hydraulic fracturing operations - with uncertainty quantification."
+Opening:
+"We are Team Energy Gladiators. We built an intelligent ML system that predicts energy consumption for hydraulic fracturing operations - with uncertainty quantification."
 
-**Innovation Moment:**
-> "But here's what makes us different. Most teams built a model. We built a platform. Watch this..."
-> [Type into AI Assistant: "What features would you recommend for optimizing this model?"]
+Innovation Moment:
+"But here is what makes us different. Most teams built a model. We built a platform. Watch this..."
+[Type into AI Assistant: "What features would you recommend for optimizing this model?"]
 
-**Closing:**
-> "Commercial tools like Spotfire cost thousands and only tell you what happened. Our solution tells you what WILL happen, how confident we are, and can adapt to any future problem. Thank you."
+Closing:
+"Commercial tools like Spotfire cost thousands and only tell you what happened. Our solution tells you what WILL happen, how confident we are, and can adapt to any future problem. Thank you."
 
 ---
 
-**Team Energy Gladiators - Good luck!** 🏆
+Team Energy Gladiators - Good luck!
