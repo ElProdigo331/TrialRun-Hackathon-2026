@@ -812,15 +812,18 @@ elif page == "5. Model Training":
                 with col1:
                     n_estimators = st.slider("Number of Trees", 50, 300, 100, 50)
                     max_depth = st.selectbox("Max Depth", [None, 5, 10, 15, 20], index=3)
-                with col2:
                     min_samples_split = st.slider("Min Samples Split", 2, 20, 5)
-                    cv_folds = st.slider("Cross-Validation Folds", 3, 10, 5)
+                with col2:
+                    min_samples_leaf = st.slider("Min Samples Leaf", 1, 10, 1)
+                    ccp_alpha = st.slider("CCP Alpha (Pruning)", 0.0, 0.05, 0.0, 0.005)
+                    min_impurity_decrease = st.slider("Min Impurity Decrease", 0.0, 0.1, 0.0, 0.01)
+                cv_folds = st.slider("Cross-Validation Folds", 3, 10, 5)
             else:
                 with col1:
                     n_trials = st.slider("Optuna Trials", 10, 100, 30, 10)
                     cv_folds = st.slider("Cross-Validation Folds", 3, 10, 5)
                 with col2:
-                    st.info("Optuna will search:\n- n_estimators: 50-300\n- max_depth: 3-20\n- min_samples_split: 2-20")
+                    st.info("Optuna will search:\n- n_estimators: 50-300\n- max_depth: 3-20\n- min_samples_split: 2-20\n- min_samples_leaf: 1-10\n- ccp_alpha: 0.0-0.05\n- min_impurity_decrease: 0.0-0.1")
         
         elif model_type == "XGBoost":
             tuning_mode = st.radio(
@@ -908,6 +911,9 @@ elif page == "5. Model Training":
                                 'n_estimators': trial.suggest_int('n_estimators', 50, 300),
                                 'max_depth': trial.suggest_int('max_depth', 3, 20),
                                 'min_samples_split': trial.suggest_int('min_samples_split', 2, 20),
+                                'min_samples_leaf': trial.suggest_int('min_samples_leaf', 1, 10),
+                                'ccp_alpha': trial.suggest_float('ccp_alpha', 0.0, 0.05),
+                                'min_impurity_decrease': trial.suggest_float('min_impurity_decrease', 0.0, 0.1),
                                 'random_state': 42,
                                 'n_jobs': -1
                             }
@@ -922,7 +928,7 @@ elif page == "5. Model Training":
                         best_params['random_state'] = 42
                         best_params['n_jobs'] = -1
                         
-                        st.success(f"Best params: n_estimators={best_params['n_estimators']}, max_depth={best_params['max_depth']}, min_samples_split={best_params['min_samples_split']}")
+                        st.success(f"Best: trees={best_params['n_estimators']}, depth={best_params['max_depth']}, leaf={best_params['min_samples_leaf']}, alpha={best_params['ccp_alpha']:.4f}")
                         
                         model = RandomForestRegressor(**best_params)
                 else:
@@ -930,6 +936,9 @@ elif page == "5. Model Training":
                         n_estimators=n_estimators,
                         max_depth=max_depth,
                         min_samples_split=min_samples_split,
+                        min_samples_leaf=min_samples_leaf,
+                        ccp_alpha=ccp_alpha,
+                        min_impurity_decrease=min_impurity_decrease,
                         random_state=42,
                         n_jobs=-1
                     )
