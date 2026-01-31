@@ -1015,7 +1015,7 @@ elif page == "5. Model Training":
             col2.metric("CV R² Std", f"{cv_scores.std():.4f}")
             col3.metric("Train R²", f"{r2_score(y, y_pred):.4f}")
             
-            if model_type in ["Random Forest", "XGBoost"]:
+            if hasattr(model, 'feature_importances_'):
                 st.subheader("Feature Importance")
                 importance_df = pd.DataFrame({
                     'Feature': feature_cols,
@@ -1026,7 +1026,7 @@ elif page == "5. Model Training":
                             title="Top 20 Feature Importances")
                 fig.update_layout(yaxis={'categoryorder': 'total ascending'})
                 st.plotly_chart(fig, use_container_width=True)
-            else:
+            elif hasattr(model, 'coef_'):
                 st.subheader("Feature Coefficients (Linear Model)")
                 coef_df = pd.DataFrame({
                     'Feature': feature_cols,
