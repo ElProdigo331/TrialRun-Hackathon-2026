@@ -144,6 +144,13 @@ streamlit run app.py --server.port 5000
 - **G0, Gdry, Gsat** - Shear modulus variants
 - **facies** - Rock type (1-6, encoded as distribution)
 
+### Industry-Standard Features (SPE Literature):
+| Feature | Formula | Reference |
+|---------|---------|-----------|
+| **RQI** | 0.0314 × √(k/φ) | Reservoir Quality Index (Amaefule et al. 1993) |
+| **FZI** | RQI / [φ/(1-φ)] | Flow Zone Indicator - hydraulic flow unit classification |
+| **Vp_Vs_ratio** | Vp / Vs | Lithology & fluid indicator (rock physics) |
+
 ### Derived Rock Quality Features:
 | Feature | Formula | Interpretation |
 |---------|---------|----------------|

@@ -634,6 +634,23 @@ elif page == "4. Feature Engineering":
                 
                 if 'perm_mean' in dataset.columns and 'GR_mean' in dataset.columns:
                     dataset['flow_quality'] = np.log1p(dataset['perm_mean']) / (dataset['GR_mean'] + 1)
+                
+                # INDUSTRY-STANDARD FEATURES (SPE Literature)
+                # RQI - Reservoir Quality Index (Amaefule et al. 1993)
+                # RQI = 0.0314 × sqrt(k/φ) - relates perm/porosity to flow capacity
+                if 'phi_mean' in dataset.columns and 'perm_mean' in dataset.columns:
+                    phi_safe = dataset['phi_mean'].replace(0, 0.001)  # Avoid division by zero
+                    dataset['RQI'] = 0.0314 * np.sqrt(dataset['perm_mean'] / phi_safe)
+                    
+                    # FZI - Flow Zone Indicator (hydraulic flow unit classification)
+                    # FZI = RQI / (φ / (1-φ))
+                    phi_z = phi_safe / (1 - phi_safe)
+                    dataset['FZI'] = dataset['RQI'] / phi_z
+                
+                # Vp/Vs ratio - Lithology and fluid indicator (rock physics)
+                if 'Vp_mean' in dataset.columns and 'Vs_mean' in dataset.columns:
+                    vs_safe = dataset['Vs_mean'].replace(0, 1)  # Avoid division by zero
+                    dataset['Vp_Vs_ratio'] = dataset['Vp_mean'] / vs_safe
             
             # NATALY'S INSIGHT: Analog Well Similarity Feature
             # Correlate wells to known good producers based on rock quality
@@ -723,11 +740,19 @@ elif page == "4. Feature Engineering":
             st.success("Rock quality features created!")
             
             st.subheader("New Features Preview")
-            new_cols = ['Well_ID', 'phi_perm_product', 'rock_quality', 'impedance_ratio', 'net_to_gross', 'storage_capacity', 'flow_quality', 'analog_similarity', 'analog_production_proxy']
+            new_cols = ['Well_ID', 'phi_perm_product', 'rock_quality', 'RQI', 'FZI', 'Vp_Vs_ratio', 'impedance_ratio', 'net_to_gross', 'storage_capacity', 'flow_quality', 'analog_similarity', 'analog_production_proxy']
             available_cols = [c for c in new_cols if c in df.columns]
             st.dataframe(df[available_cols].head(10), use_container_width=True)
             
-            st.subheader("Rock Quality Feature Correlations with Production")
+            st.subheader("Feature Correlations with Production")
+            st.markdown("**Industry-Standard Features (SPE Literature):**")
+            for col in ['RQI', 'FZI', 'Vp_Vs_ratio']:
+                if col in df.columns:
+                    corr = df[col].corr(df['Target_3yr_Oil_BBL'])
+                    direction = "↑" if corr > 0 else "↓"
+                    st.markdown(f"- **{col}**: {corr:.3f} {direction}")
+            
+            st.markdown("**Rock Quality Features:**")
             for col in ['phi_perm_product', 'rock_quality', 'net_to_gross', 'storage_capacity', 'flow_quality', 'analog_similarity', 'analog_production_proxy']:
                 if col in df.columns:
                     corr = df[col].corr(df['Target_3yr_Oil_BBL'])
