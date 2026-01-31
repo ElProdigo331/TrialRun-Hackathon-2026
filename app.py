@@ -1015,7 +1015,7 @@ elif page == "5. Model Training":
             col2.metric("CV R² Std", f"{cv_scores.std():.4f}")
             col3.metric("Train R²", f"{r2_score(y, y_pred):.4f}")
             
-            if model_type == "Random Forest":
+            if model_type in ["Random Forest", "XGBoost"]:
                 st.subheader("Feature Importance")
                 importance_df = pd.DataFrame({
                     'Feature': feature_cols,
