@@ -45,12 +45,16 @@ def load_2026_data():
 @st.cache_data
 def apply_mice_to_raw_data(train_raw, test_raw):
     """
-    Apply MICE imputation at the depth level (before aggregation).
+    Apply MICE + CART imputation at the depth level (before aggregation).
+    Uses Decision Trees (CART) as the estimator per SPE 218890 (Abdulkhaleq et al. 2024):
+    "MICE + CART outperformed other methods for both clastic and carbonate reservoirs."
+    
     This preserves correlations between features and is the academically
     recommended approach per Van Buuren (2018) and Hallam et al. (2022).
     """
     from sklearn.experimental import enable_iterative_imputer
     from sklearn.impute import IterativeImputer
+    from sklearn.tree import DecisionTreeRegressor
     
     numeric_cols = ['AI', 'SI', 'Vp', 'Vs', 'rho_b', 'rho_f', 'rho_m', 
                     'K0', 'Kdry', 'Kf', 'Ksat', 'G0', 'Gdry', 'Gsat', 
@@ -61,7 +65,12 @@ def apply_mice_to_raw_data(train_raw, test_raw):
     train_imputed = train_raw.copy()
     test_imputed = test_raw.copy()
     
-    mice_imputer = IterativeImputer(random_state=42, max_iter=10)
+    cart_estimator = DecisionTreeRegressor(random_state=42, max_depth=10)
+    mice_imputer = IterativeImputer(
+        estimator=cart_estimator,
+        random_state=42, 
+        max_iter=10
+    )
     
     mice_imputer.fit(train_raw[available_cols])
     train_imputed[available_cols] = mice_imputer.transform(train_raw[available_cols])
@@ -210,17 +219,18 @@ if page == "1. Data Loading & Aggregation":
             st.metric("Missing Percentage", f"{missing_pct:.1f}%")
         with col2:
             st.info("""
-            **Why MICE before aggregation?**
-            - Preserves correlations between features (phi-perm-GR)
-            - All 21 depth measurements contribute to aggregation
-            - Recommended by Van Buuren (2018), Hallam et al. (2022)
+            **Why MICE + CART?**
+            - **CART** (Decision Trees) handles non-linear relationships
+            - Outperforms other methods per SPE 218890 (Abdulkhaleq 2024)
+            - Preserves phi-perm-GR correlations
+            - All 21 depth measurements contribute
             """)
         
-        with st.spinner("Applying MICE imputation at depth level..."):
+        with st.spinner("Applying MICE + CART imputation at depth level..."):
             prod_wells_imputed, preprod_wells_imputed = apply_mice_to_raw_data(prod_wells, preprod_wells)
         
         missing_after = prod_wells_imputed[available_cols].isnull().sum().sum()
-        st.success(f"MICE imputation complete! Missing values: {missing_before:,} → {missing_after}")
+        st.success(f"MICE + CART imputation complete! Missing values: {missing_before:,} → {missing_after}")
         
         st.subheader("Step 1b: Aggregating Well Logs (Multi-Row → One Row per Well)")
         
@@ -276,14 +286,14 @@ elif page == "2. Data Cleaning (MICE)":
         test_df = st.session_state.test_df.copy()
         
         st.success("""
-        **MICE imputation was already applied in Step 1 (at the depth level, before aggregation).**
+        **MICE + CART imputation was already applied in Step 1 (at the depth level, before aggregation).**
         
         This is the academically correct approach per:
         - Van Buuren (2018): *Flexible Imputation of Missing Data*
         - Hallam et al. (2022): *Multivariate imputation for elastic well log data*
+        - **SPE 218890 (Abdulkhaleq et al. 2024):** *MICE + CART outperformed other methods*
         
-        Imputing at the granular level preserves within-cluster correlations and ensures 
-        all 21 depth measurements per well contribute to aggregated statistics.
+        Using CART (Decision Trees) as the estimator handles non-linear relationships in petrophysical data.
         """)
         
         st.subheader("Post-Imputation Data Quality Check")

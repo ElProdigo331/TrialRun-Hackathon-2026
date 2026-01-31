@@ -13,7 +13,7 @@ This document provides peer-reviewed academic justification for each step in our
 | Step | Decision | Primary Source |
 |------|----------|----------------|
 | 1. Data Aggregation | Multi-row to single-row via statistical aggregates | Torres Caceres et al. (2024); AAPG Wiki |
-| 2. Missing Data | MICE before aggregation (7.3%) | Van Buuren (2018); Hallam et al. (2022) |
+| 2. Missing Data | MICE + CART before aggregation (7.3%) | Van Buuren (2018); Hallam (2022); SPE 218890 (Abdulkhaleq 2024) |
 | 3. Feature Engineering | Physics-based derived features | Amaefule et al. (1993); Cao et al. (2025) |
 | 4. Model Selection | Random Forest Regression | Al shaba'an & Nemer (2024): 99% accuracy |
 | 5. Hyperparameter Tuning | Optuna (TPE sampler) | Akiba et al. (2019, KDD) |
@@ -80,7 +80,11 @@ Your raw data has **7.3% missing values** across petrophysical features. How sho
 
 ## Our Approach
 
-**MICE imputation at the depth level BEFORE aggregation** — the academically correct approach.
+**MICE + CART imputation at the depth level BEFORE aggregation** — the academically correct approach.
+
+Using CART (Classification and Regression Trees) as the estimator within MICE:
+> "MICE + CART outperformed other methods for both clastic and carbonate reservoirs."
+> — SPE 218890, Abdulkhaleq et al. (2024)
 
 ## Research Justification
 
