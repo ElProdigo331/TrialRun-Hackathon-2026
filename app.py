@@ -705,7 +705,7 @@ elif page == "9. AI ML Assistant":
     def get_system_prompt():
         data_context = get_data_context()
         
-        return f"""You are an expert ML assistant integrated into the Energy AI Hackathon 2026 workflow application, built by Team Energy Gladiators.
+        return f"""You are an expert ML assistant integrated into the Energy AI Hackathon 2026 workflow application, built by Team Brain Oil.
 
 YOUR TWO ROLES:
 1. TEAM ONBOARDING: Help teammates understand this application and walk them through each step

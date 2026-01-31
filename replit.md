@@ -115,3 +115,8 @@ Residual bootstrapping - sample 100 residuals with replacement and add to point 
 | Fuel Type | Grid, Diesel, or CNG |
 | Fuel Value | Point estimate |
 | Real_1 through Real_100 | 100 uncertainty realizations |
+
+## Team Information
+- **Team Name:** Brain Oil
+- **Submission Files:** BrainOil.ipynb, BrainOil.pptx, solution.csv
+- **Deadline:** February 1st, 2026 at 12:00 noon
