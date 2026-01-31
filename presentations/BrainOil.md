@@ -119,25 +119,37 @@ Well_ID | X | Y | Z | phi | perm | GR | AI | facies | ...
 | Density | rho_b, rho_f, rho_m | mean, std |
 | Moduli | K, G (dry, sat) | mean, std |
 
-**Derived Rock Quality Features (Industry Expert Advice):**
+**Industry-Standard Features (SPE Literature):**
+
+| Feature | Formula | Reference |
+|---------|---------|-----------|
+| **RQI** | 0.0314 × √(k/φ) | Reservoir Quality Index (Amaefule et al. 1993) |
+| **FZI** | RQI / [φ/(1-φ)] | Flow Zone Indicator - hydraulic flow units |
+| **Vp_Vs_ratio** | Vp / Vs | Lithology & fluid indicator (rock physics) |
+
+**Derived Rock Quality Features:**
 
 | Feature | Formula | Interpretation |
 |---------|---------|----------------|
 | **phi_perm_product** | phi × log(perm) | Flow productivity |
 | **rock_quality** | phi / GR | Clean sand index |
-| **impedance_ratio** | AI / SI | Lithology contrast |
 | **net_to_gross** | 1 - facies_5% - facies_6% | Sand vs shale ratio |
 | **storage_capacity** | phi × depth_range | Pore volume proxy |
-| **flow_quality** | log(perm) / GR | Flow per unit shaliness |
 
-**Analog Well Similarity (Nataly's Insight):**
+**Analog Well & Spatial Features (Nataly's Insight):**
 
 | Feature | Description |
 |---------|-------------|
-| **analog_similarity** | 1 / (1 + min_distance_to_good_producer) |
-| **analog_production_proxy** | Weighted avg production of similar good wells |
+| **analog_similarity** | Similarity to known good producers |
+| **spatial_production_proxy** | Distance-weighted nearby production |
+| **left_region_score** | Proximity to high-production left region |
 
-*"Look for correlation of known wells in good sand/rock that historically produced oil to the training wells."*
+**Best Zone Features (Preserve Depth Heterogeneity):**
+
+| Feature | Description |
+|---------|-------------|
+| **best_zone_phi/perm/GR** | Properties at best rock quality depth |
+| **zone_quality_contrast** | Heterogeneity between best and worst zones |
 
 ---
 
@@ -238,10 +250,12 @@ This captures prediction uncertainty from model limitations.
 
 **Novel Data Analytics:**
 1. **MICE + CART Imputation** - Per SPE 218890, applied at depth level
-2. **Rock Quality Features** - Industry expert-driven feature engineering
-3. **Interactive Experiments** - Multiple model configurations compared
-4. **StandardScaler Normalization** - Dr. Pyrcz's recommendation
-5. **Spatial Integration** - Sand proportion map with noise handling
+2. **Industry-Standard Features** - RQI, FZI, Vp/Vs ratio (Amaefule et al. 1993)
+3. **Rock Quality Features** - Industry expert-driven feature engineering
+4. **Analog Well Similarity** - Nataly's insight: correlate to good producers
+5. **Spatial Proximity** - Left region produces more oil
+6. **Best Zone Features** - Preserve depth heterogeneity
+7. **StandardScaler Normalization** - Dr. Pyrcz's recommendation
 
 ---
 
@@ -249,8 +263,10 @@ This captures prediction uncertainty from model limitations.
 
 **Summary:**
 - Complete ML pipeline for oil production prediction
-- Industry expert insights incorporated (rock quality focus)
-- MICE imputation at depth level (academically correct)
+- **Industry-standard features**: RQI, FZI, Vp/Vs ratio (SPE literature)
+- **Expert insights**: Rock quality, analog wells, spatial proximity
+- **Best zone features**: Preserve depth heterogeneity
+- MICE imputation at depth level (per Van Buuren 2018)
 - Interactive experimentation for model selection
 - 100 uncertainty realizations per prediction
 
