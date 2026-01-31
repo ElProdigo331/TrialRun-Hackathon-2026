@@ -54,26 +54,53 @@ Each well has ~21 rows (depth measurements Z=19-39). Must aggregate to one row p
 
 1. **Data Loading, MICE & Aggregation** - Load data, apply MICE at depth level (before aggregation), then aggregate
 2. **Data Quality Verification** - Verify MICE was applied correctly, check for remaining missing values
-3. **Exploratory Data Analysis** - Visualize targets, features, correlations
-4. **Feature Engineering** - phi_perm_product, rock_quality, impedance_ratio
-5. **Model Training** - Random Forest with Optuna auto-tuning
-6. **Generate Solution** - Point estimates + 100 realizations via residual bootstrapping
+3. **Exploratory Data Analysis** - 4 tabs: Target Analysis, Feature Analysis, Correlations, **Rock Quality Analysis**
+4. **Feature Engineering** - 6 rock quality features (see below)
+5. **Model Training** - Interactive model selection (Linear/Ridge/RF), normalization toggle, sand map handling
+6. **Generate Solution** - Point estimates + 100 realizations, experiment tracking & comparison
 7. **AI Assistant** - Chat interface for ML guidance
 
 **Note:** MICE is now applied at the depth level BEFORE aggregation per Van Buuren (2018) and Hallam et al. (2022). This preserves correlations and ensures all depth measurements contribute.
 
 ---
 
+## Industry Expert Insights (Incorporated)
+
+From 4 industry heads at the hackathon:
+
+| Insight | Implementation |
+|---------|----------------|
+| "Good rock = more oil" | Rock Quality Analysis tab, Good/Bad rock classification |
+| "Time & location matter" | X, Y spatial correlations, sand_proportion map |
+| "Format features correctly" | StandardScaler normalization, derived rock quality metrics |
+
+---
+
 ## Key Techniques (Host Recommended)
 
 1. **MICE Imputation** - Multivariate Imputation by Chained Equations
-   - Preserves correlations between features
-   - Better than simple median imputation for 7-10% missing data
+   - Uses DecisionTreeRegressor (CART) per SPE 218890
+   - Applied at depth level before aggregation
 
-2. **Shapley Values** - Feature importance interpretation
-   - Available in EDA section
+2. **Feature Normalization** - StandardScaler (Dr. Pyrcz's advice)
+   - Equalizes feature scales for fair comparison
 
-3. **Correlation Analysis** - Identify top predictors
+3. **Rock Quality Analysis** - Industry expert recommendation
+   - Good vs Bad rock classification
+   - Production correlation by rock class
+
+---
+
+## Interactive Experiment Framework (Step 5)
+
+| Option | Choices | Purpose |
+|--------|---------|---------|
+| **Model Type** | Linear Regression, Ridge, Random Forest | Try simple first (Dr. Pyrcz) |
+| **Normalize Features** | Checkbox (default: ON) | StandardScaler |
+| **Sand Map Handling** | Include, Exclude, Smooth (3x3) | Handle noisy sand map (Dinghan Wang) |
+| **Experiment Name** | Auto-generated | Labels output files for comparison |
+
+**Experiment outputs saved to:** `outputs/solution_{experiment_name}.csv`
 
 ---
 
@@ -94,7 +121,7 @@ streamlit run app.py --server.port 5000
 │   ├── Production_history_production_wells.csv
 │   ├── 2d_sand_proportion.npy
 │   └── solution.csv
-├── outputs/                  # Generated outputs
+├── outputs/                  # Generated outputs (experiment CSVs)
 ├── notebooks/
 │   └── BrainOil.ipynb       # Submission notebook
 ├── presentations/
@@ -117,11 +144,19 @@ streamlit run app.py --server.port 5000
 - **G0, Gdry, Gsat** - Shear modulus variants
 - **facies** - Rock type (1-6, encoded as distribution)
 
-### Derived:
+### Derived Rock Quality Features:
+| Feature | Formula | Interpretation |
+|---------|---------|----------------|
+| **phi_perm_product** | phi × log(perm) | Flow productivity (higher = better) |
+| **rock_quality** | phi / GR | Clean sand index (higher = cleaner) |
+| **impedance_ratio** | AI / SI | Lithology contrast |
+| **net_to_gross** | 1 - facies_5% - facies_6% | Sand vs shale ratio |
+| **storage_capacity** | phi × depth_range | Total pore volume proxy |
+| **flow_quality** | log(perm) / GR | Flow per unit shaliness |
+
+### Spatial:
+- **X, Y** - Well coordinates
 - **sand_proportion** - From 2D seismic map
-- **phi_perm_product** - phi × log(perm)
-- **rock_quality** - phi / GR
-- **impedance_ratio** - AI / SI
 - **depth_range** - Z_max - Z_min
 
 ---
@@ -140,8 +175,18 @@ streamlit run app.py --server.port 5000
 - pandas
 - numpy
 - scikit-learn
+- scipy (for MICE, smoothing)
 - matplotlib
 - seaborn
 - plotly
 - optuna
 - openai (for AI assistant)
+
+---
+
+## Scholarly Analysis Page
+
+Available at sidebar option "Scholarly Analysis" - includes:
+- 15+ peer-reviewed citations
+- Methodology justification
+- Downloadable HTML for print-to-PDF

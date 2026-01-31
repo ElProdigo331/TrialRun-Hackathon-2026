@@ -56,29 +56,48 @@ Well_ID | X | Y | Z | phi | perm | GR | AI | facies | ...
 
 ---
 
-## SLIDE 4: Our Approach
+## SLIDE 4: Industry Expert Insights
+
+**From 4 Industry Heads at the Hackathon:**
+
+| Insight | How We Applied It |
+|---------|------------------|
+| **"Good rock = more oil"** | Rock quality analysis: High phi, high perm, low GR = good rock |
+| **"Time & location matter"** | X, Y coordinates + sand proportion map as features |
+| **"Format features correctly"** | StandardScaler normalization (Dr. Pyrcz's advice) |
+
+**Rock Quality Classification:**
+- **Good Rock:** High porosity (φ), Low Gamma Ray (GR), High permeability
+- **Poor Rock:** Low φ, High GR, Low permeability
+
+**Result:** Good rock wells produce significantly more oil than poor rock wells!
+
+---
+
+## SLIDE 5: Our Approach
 
 **Complete ML Pipeline:**
 
 ```
-1. Well Log Aggregation
+1. Data Loading & MICE Imputation (Depth Level)
+   └── Handle ~7.3% missing values BEFORE aggregation
+   └── Uses DecisionTreeRegressor (CART) per SPE 218890
+
+2. Well Log Aggregation
    └── Multi-row → One row per well
    └── Statistics: mean, std, min, max
 
-2. Target Calculation
+3. Target Calculation
    └── 3-year cumulative oil from production history
 
-3. Feature Engineering
+4. Feature Engineering (Rock Quality Focus)
+   └── 6 derived rock quality features
    └── Sand proportion from seismic map
-   └── Facies distribution percentages
-   └── Derived features (phi×log(perm), rock quality)
 
-4. MICE Imputation
-   └── Handle 7-10% missing values
-   └── Preserves feature correlations
-
-5. Random Forest + Optuna
-   └── Automated hyperparameter tuning
+5. Model Training (Interactive Experiments)
+   └── Linear Regression, Ridge, Random Forest
+   └── StandardScaler normalization
+   └── Sand map: Include / Exclude / Smooth options
 
 6. Uncertainty: Residual Bootstrapping
    └── 100 realizations per prediction
@@ -86,7 +105,7 @@ Well_ID | X | Y | Z | phi | perm | GR | AI | facies | ...
 
 ---
 
-## SLIDE 5: Feature Engineering
+## SLIDE 6: Feature Engineering
 
 **Petrophysical Features (Aggregated per Well)**
 
@@ -99,58 +118,61 @@ Well_ID | X | Y | Z | phi | perm | GR | AI | facies | ...
 | Density | rho_b, rho_f, rho_m | mean, std |
 | Moduli | K, G (dry, sat) | mean, std |
 
-**Derived Features:**
-- `phi_perm_product` = phi × log(perm) - productivity indicator
-- `rock_quality` = phi / GR - reservoir quality index
-- `sand_proportion` - from 2D seismic map using X,Y coordinates
+**Derived Rock Quality Features (Industry Expert Advice):**
+
+| Feature | Formula | Interpretation |
+|---------|---------|----------------|
+| **phi_perm_product** | phi × log(perm) | Flow productivity |
+| **rock_quality** | phi / GR | Clean sand index |
+| **impedance_ratio** | AI / SI | Lithology contrast |
+| **net_to_gross** | 1 - facies_5% - facies_6% | Sand vs shale ratio |
+| **storage_capacity** | phi × depth_range | Pore volume proxy |
+| **flow_quality** | log(perm) / GR | Flow per unit shaliness |
 
 ---
 
-## SLIDE 6: MICE Imputation
+## SLIDE 7: MICE Imputation
 
 **Why MICE? (Recommended by Hackathon Host)**
 
-Missing data: 7-10% across petrophysical features
+Missing data: ~7.3% across petrophysical features
 
-| Simple Imputation | MICE |
-|-------------------|------|
+| Simple Imputation | MICE + CART |
+|-------------------|-------------|
 | Uses median/mean only | Uses ALL features to predict missing |
 | Ignores correlations | Preserves correlations |
 | Can distort relationships | Maintains data structure |
+| One estimate | Per SPE 218890 (Abdulkhaleq et al. 2024) |
 
-**How MICE Works:**
-1. Initialize missing values with median
-2. For each feature with missing values:
-   - Fit regression using all OTHER features
-   - Predict and replace missing values
-3. Iterate until convergence
-
-**Result:** More realistic imputed values that respect petrophysical relationships
+**Key Innovation: MICE at Depth Level**
+- Applied BEFORE aggregation (per Van Buuren 2018)
+- All 21 depth measurements contribute to well statistics
+- Preserves phi-perm-GR correlations
 
 ---
 
-## SLIDE 7: Model Training
+## SLIDE 8: Model Training (Interactive Experiments)
 
-**Random Forest with Optuna Auto-Tuning**
+**Experiment Framework (Dr. Pyrcz's Advice: "Try simplest things first")**
 
-Optuna searches parameter space:
-- `n_estimators`: 50-300
-- `max_depth`: 3-20
-- `min_samples_split`: 2-20
+| Option | Choices | Purpose |
+|--------|---------|---------|
+| Model Type | Linear, Ridge, Random Forest | Baseline → Complex |
+| Normalize | StandardScaler (ON by default) | Fair feature comparison |
+| Sand Map | Include / Exclude / Smooth 3×3 | Handle deliberate noise |
+
+**Experiment Comparison:**
+- Each experiment saved as `solution_{experiment_name}.csv`
+- Compare CV R² and prediction distributions
+- Select best configuration for final submission
 
 **Cross-Validation Results:**
 - CV R²: [Value from training]
-- Number of features: ~70+ after aggregation
-
-**Top 10 Most Important Features:**
-1. [Feature 1]
-2. [Feature 2]
-3. [Feature 3]
-... (from model.feature_importances_)
+- Features used: ~80+ after engineering
 
 ---
 
-## SLIDE 8: Uncertainty Quantification
+## SLIDE 9: Uncertainty Quantification
 
 **Method: Residual Bootstrapping**
 
@@ -172,7 +194,7 @@ This captures prediction uncertainty from model limitations.
 
 ---
 
-## SLIDE 9: Results
+## SLIDE 10: Results
 
 **Predictions for Wells 72-83**
 
@@ -189,10 +211,11 @@ This captures prediction uncertainty from model limitations.
 - Predictions align with training data distribution (8M - 74M BBL)
 - Higher uncertainty for wells in underrepresented regions
 - Spatial patterns consistent with sand proportion map
+- Good rock wells have higher predicted production
 
 ---
 
-## SLIDE 10: Value Proposition
+## SLIDE 11: Value Proposition
 
 **Why Our Solution?**
 
@@ -204,20 +227,21 @@ This captures prediction uncertainty from model limitations.
 | Single analog well | Learns from 71 wells |
 
 **Novel Data Analytics:**
-1. **MICE Imputation** - Recommended by host, preserves feature correlations
-2. **Well Log Aggregation** - Handles complex multi-row structure
-3. **Spatial Integration** - Incorporates 2D seismic sand map
-4. **Automated Tuning** - Optuna finds optimal model
+1. **MICE + CART Imputation** - Per SPE 218890, applied at depth level
+2. **Rock Quality Features** - Industry expert-driven feature engineering
+3. **Interactive Experiments** - Multiple model configurations compared
+4. **StandardScaler Normalization** - Dr. Pyrcz's recommendation
+5. **Spatial Integration** - Sand proportion map with noise handling
 
 ---
 
-## SLIDE 11: Conclusion
+## SLIDE 12: Conclusion
 
 **Summary:**
 - Complete ML pipeline for oil production prediction
-- Handles multi-row well log data through aggregation
-- MICE imputation for missing values (host recommendation)
-- Optuna-tuned Random Forest model
+- Industry expert insights incorporated (rock quality focus)
+- MICE imputation at depth level (academically correct)
+- Interactive experimentation for model selection
 - 100 uncertainty realizations per prediction
 
 **Files Submitted:**
@@ -243,13 +267,18 @@ Energy AI Hackathon 2026
 - + Spatial (X, Y, depth_range)
 - + Facies distribution (6 facies types)
 - + Sand proportion
-- + Derived features (3)
-- Total: ~75-80 features
+- + Derived rock quality features (6)
+- Total: ~80+ features
+
+**Key References:**
+- SPE 218890 (Abdulkhaleq et al. 2024) - MICE + CART
+- Van Buuren (2018) - MICE before aggregation
+- Hallam et al. (2022) - Multivariate imputation for well logs
 
 **Compute Time:**
-- Data loading & aggregation: ~2 seconds
-- MICE imputation: ~5 seconds
-- Optuna tuning (30 trials): ~30 seconds
+- Data loading & MICE: ~5 seconds
+- Aggregation & feature engineering: ~2 seconds
+- Model training (5-fold CV): ~10 seconds
 - Total: < 1 minute
 
 ---

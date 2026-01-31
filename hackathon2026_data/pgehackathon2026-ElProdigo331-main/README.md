@@ -54,6 +54,7 @@ You have the following available data:
   These two files contain the well log data along the wellbore for all 83 wells.
 
   Well_log_data_production_wells.csv - well logs for the previous production wells, well indices from 1 to 71, production is known for these wells
+  
   Well_log_data_preproduction_wells.csv - well logs for the remaining, preproduction wells, well indices from 72 to 83, production is NOT known and you will prediction 3 year cumulative production with uncertainty for these wells.
 
 * **Well Log data explanation**
