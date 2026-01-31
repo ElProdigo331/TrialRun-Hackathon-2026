@@ -12,3 +12,4 @@ reportlab
 openai
 reportlab
 optuna
+statsmodels
