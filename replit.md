@@ -154,6 +154,14 @@ streamlit run app.py --server.port 5000
 | **storage_capacity** | phi × depth_range | Total pore volume proxy |
 | **flow_quality** | log(perm) / GR | Flow per unit shaliness |
 
+### Analog Well Similarity (Nataly's Insight):
+| Feature | Description |
+|---------|-------------|
+| **analog_similarity** | 1 / (1 + min_distance_to_good_producer) |
+| **analog_production_proxy** | Weighted avg production of similar good wells |
+
+Nataly (Hackathon Architect): "Look for correlation of known wells in good sand/rock that historically produced oil to the training wells."
+
 ### Spatial:
 - **X, Y** - Well coordinates
 - **sand_proportion** - From 2D seismic map

@@ -58,13 +58,14 @@ Well_ID | X | Y | Z | phi | perm | GR | AI | facies | ...
 
 ## SLIDE 4: Industry Expert Insights
 
-**From 4 Industry Heads at the Hackathon:**
+**From Industry Experts at the Hackathon:**
 
-| Insight | How We Applied It |
-|---------|------------------|
-| **"Good rock = more oil"** | Rock quality analysis: High phi, high perm, low GR = good rock |
-| **"Time & location matter"** | X, Y coordinates + sand proportion map as features |
-| **"Format features correctly"** | StandardScaler normalization (Dr. Pyrcz's advice) |
+| Expert | Insight | How We Applied It |
+|--------|---------|------------------|
+| **Industry Heads** | "Good rock = more oil" | Rock quality features: High phi, high perm, low GR |
+| **Industry Heads** | "Time & location matter" | X, Y coordinates + sand proportion map |
+| **Dr. Pyrcz** | "Format features correctly" | StandardScaler normalization |
+| **Nataly** | "Correlate to good producers" | Analog well similarity feature |
 
 **Rock Quality Classification:**
 - **Good Rock:** High porosity (φ), Low Gamma Ray (GR), High permeability
@@ -128,6 +129,15 @@ Well_ID | X | Y | Z | phi | perm | GR | AI | facies | ...
 | **net_to_gross** | 1 - facies_5% - facies_6% | Sand vs shale ratio |
 | **storage_capacity** | phi × depth_range | Pore volume proxy |
 | **flow_quality** | log(perm) / GR | Flow per unit shaliness |
+
+**Analog Well Similarity (Nataly's Insight):**
+
+| Feature | Description |
+|---------|-------------|
+| **analog_similarity** | 1 / (1 + min_distance_to_good_producer) |
+| **analog_production_proxy** | Weighted avg production of similar good wells |
+
+*"Look for correlation of known wells in good sand/rock that historically produced oil to the training wells."*
 
 ---
 

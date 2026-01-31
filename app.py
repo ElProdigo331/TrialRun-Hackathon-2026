@@ -601,17 +601,63 @@ elif page == "4. Feature Engineering":
                 if 'perm_mean' in dataset.columns and 'GR_mean' in dataset.columns:
                     dataset['flow_quality'] = np.log1p(dataset['perm_mean']) / (dataset['GR_mean'] + 1)
             
+            # NATALY'S INSIGHT: Analog Well Similarity Feature
+            # Correlate wells to known good producers based on rock quality
+            st.info("Creating Analog Well Similarity feature (Nataly's insight)...")
+            
+            # Define rock quality features for similarity calculation
+            rq_cols = ['phi_mean', 'perm_mean', 'GR_mean', 'sand_proportion']
+            available_rq_cols = [c for c in rq_cols if c in df.columns]
+            
+            if len(available_rq_cols) >= 2 and 'Target_3yr_Oil_BBL' in df.columns:
+                from sklearn.preprocessing import StandardScaler
+                from scipy.spatial.distance import cdist
+                
+                # Identify "good producers" - top 25% by production with good rock
+                prod_threshold = df['Target_3yr_Oil_BBL'].quantile(0.75)
+                good_producers = df[df['Target_3yr_Oil_BBL'] >= prod_threshold].copy()
+                
+                # Normalize rock quality features for distance calculation
+                scaler = StandardScaler()
+                train_rq_scaled = scaler.fit_transform(df[available_rq_cols].fillna(0))
+                test_rq_scaled = scaler.transform(test_df[available_rq_cols].fillna(0))
+                good_rq_scaled = scaler.transform(good_producers[available_rq_cols].fillna(0))
+                
+                # Calculate similarity to good producers (inverse of distance)
+                # For training wells
+                train_distances = cdist(train_rq_scaled, good_rq_scaled, metric='euclidean')
+                df['min_dist_to_good_producer'] = train_distances.min(axis=1)
+                df['avg_dist_to_good_producer'] = train_distances.mean(axis=1)
+                df['analog_similarity'] = 1 / (1 + df['min_dist_to_good_producer'])
+                
+                # Weighted average production of similar wells
+                weights = 1 / (train_distances + 0.1)  # Avoid division by zero
+                weights = weights / weights.sum(axis=1, keepdims=True)
+                df['analog_production_proxy'] = (weights * good_producers['Target_3yr_Oil_BBL'].values).sum(axis=1)
+                
+                # For test wells
+                test_distances = cdist(test_rq_scaled, good_rq_scaled, metric='euclidean')
+                test_df['min_dist_to_good_producer'] = test_distances.min(axis=1)
+                test_df['avg_dist_to_good_producer'] = test_distances.mean(axis=1)
+                test_df['analog_similarity'] = 1 / (1 + test_df['min_dist_to_good_producer'])
+                test_df['analog_production_proxy'] = (
+                    (1 / (test_distances + 0.1)) / (1 / (test_distances + 0.1)).sum(axis=1, keepdims=True) 
+                    * good_producers['Target_3yr_Oil_BBL'].values
+                ).sum(axis=1)
+                
+                st.success(f"Analog features created! Found {len(good_producers)} good producer wells (top 25%)")
+            
             st.session_state.train_df = df
             st.session_state.test_df = test_df
             st.success("Rock quality features created!")
             
             st.subheader("New Features Preview")
-            new_cols = ['Well_ID', 'phi_perm_product', 'rock_quality', 'impedance_ratio', 'net_to_gross', 'storage_capacity', 'flow_quality']
+            new_cols = ['Well_ID', 'phi_perm_product', 'rock_quality', 'impedance_ratio', 'net_to_gross', 'storage_capacity', 'flow_quality', 'analog_similarity', 'analog_production_proxy']
             available_cols = [c for c in new_cols if c in df.columns]
             st.dataframe(df[available_cols].head(10), use_container_width=True)
             
             st.subheader("Rock Quality Feature Correlations with Production")
-            for col in ['phi_perm_product', 'rock_quality', 'net_to_gross', 'storage_capacity', 'flow_quality']:
+            for col in ['phi_perm_product', 'rock_quality', 'net_to_gross', 'storage_capacity', 'flow_quality', 'analog_similarity', 'analog_production_proxy']:
                 if col in df.columns:
                     corr = df[col].corr(df['Target_3yr_Oil_BBL'])
                     direction = "↑" if corr > 0 else "↓"
