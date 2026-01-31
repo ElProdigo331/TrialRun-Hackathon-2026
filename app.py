@@ -90,12 +90,12 @@ def calculate_3year_targets(prod_history):
     
     return pd.DataFrame(targets)
 
-def lookup_sand_proportion(df, sand_map):
+def lookup_sand_proportion(df, sand_map, x_min, x_max, y_min, y_max):
     x_coords = df['X'].values
     y_coords = df['Y'].values
     
-    x_scaled = np.clip((x_coords / x_coords.max() * (sand_map.shape[1] - 1)).astype(int), 0, sand_map.shape[1] - 1)
-    y_scaled = np.clip((y_coords / y_coords.max() * (sand_map.shape[0] - 1)).astype(int), 0, sand_map.shape[0] - 1)
+    x_scaled = np.clip(((x_coords - x_min) / (x_max - x_min) * (sand_map.shape[1] - 1)).astype(int), 0, sand_map.shape[1] - 1)
+    y_scaled = np.clip(((y_coords - y_min) / (y_max - y_min) * (sand_map.shape[0] - 1)).astype(int), 0, sand_map.shape[0] - 1)
     
     sand_values = sand_map[y_scaled, x_scaled]
     return sand_values
@@ -171,8 +171,13 @@ if page == "1. Data Loading & Aggregation":
             train_agg = train_agg.merge(targets, on='Well_ID', how='left')
         
         with st.spinner("Looking up sand proportion from map..."):
-            train_agg['sand_proportion'] = lookup_sand_proportion(train_agg, sand_map)
-            test_agg['sand_proportion'] = lookup_sand_proportion(test_agg, sand_map)
+            all_x = pd.concat([train_agg['X'], test_agg['X']])
+            all_y = pd.concat([train_agg['Y'], test_agg['Y']])
+            x_min, x_max = all_x.min(), all_x.max()
+            y_min, y_max = all_y.min(), all_y.max()
+            
+            train_agg['sand_proportion'] = lookup_sand_proportion(train_agg, sand_map, x_min, x_max, y_min, y_max)
+            test_agg['sand_proportion'] = lookup_sand_proportion(test_agg, sand_map, x_min, x_max, y_min, y_max)
         
         st.session_state.train_df = train_agg
         st.session_state.test_df = test_agg
@@ -484,11 +489,16 @@ elif page == "5. Model Training":
                 )
             
             with st.spinner("Training final model..."):
-                cv_scores = cross_val_score(model, X, y, cv=cv_folds, scoring='r2')
-                model.fit(X, y)
+                from sklearn.model_selection import cross_val_predict
                 
+                cv_scores = cross_val_score(model, X, y, cv=cv_folds, scoring='r2')
+                
+                y_pred_cv = cross_val_predict(model, X, y, cv=cv_folds)
+                cv_residuals = y - y_pred_cv
+                
+                model.fit(X, y)
                 y_pred = model.predict(X)
-                residuals = y - y_pred
+                residuals = cv_residuals
                 
                 st.session_state.model = model
                 st.session_state.residuals = residuals.values
@@ -543,18 +553,19 @@ elif page == "6. Generate Solution":
         n_realizations = st.slider("Number of Realizations", 10, 100, 100)
         
         if st.button("Generate Predictions", type="primary"):
-            X_test = test_df[feature_cols].fillna(0)
+            test_df_sorted = test_df.sort_values('Well_ID').reset_index(drop=True)
+            X_test = test_df_sorted[feature_cols].fillna(0)
             
             point_predictions = model.predict(X_test)
             
-            realizations = np.zeros((len(test_df), n_realizations))
+            realizations = np.zeros((len(test_df_sorted), n_realizations))
             for i in range(n_realizations):
-                sampled_residuals = np.random.choice(residuals, size=len(test_df), replace=True)
+                sampled_residuals = np.random.choice(residuals, size=len(test_df_sorted), replace=True)
                 realizations[:, i] = point_predictions + sampled_residuals
                 realizations[:, i] = np.maximum(realizations[:, i], 0)
             
             solution = pd.DataFrame()
-            solution['Well_ID'] = test_df['Well_ID'].values
+            solution['Well_ID'] = test_df_sorted['Well_ID'].astype(int).values
             solution['Prediction_BBL'] = point_predictions.round(0).astype(int)
             
             for i in range(n_realizations):
