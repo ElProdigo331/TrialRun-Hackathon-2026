@@ -109,6 +109,40 @@ def aggregate_well_logs(well_logs_df):
         facies_pivot.columns = [f'facies_{int(c)}_pct' for c in facies_pivot.columns]
         aggregated = aggregated.merge(facies_pivot.reset_index(), on='Well_ID', how='left')
     
+    # BEST ZONE FEATURES: Preserve depth heterogeneity by extracting "pay zone" characteristics
+    # Find the depth with best rock quality (high phi, high perm, low GR)
+    if all(col in well_logs_df.columns for col in ['phi', 'perm', 'GR']):
+        # Create rock quality score at each depth
+        df_temp = well_logs_df.copy()
+        df_temp['depth_rock_quality'] = df_temp['phi'] * np.log1p(df_temp['perm']) / (df_temp['GR'] + 1)
+        
+        # Get features from best depth (highest rock quality)
+        best_zone = df_temp.loc[df_temp.groupby('Well_ID')['depth_rock_quality'].idxmax()]
+        best_zone_cols = {
+            'best_zone_phi': 'phi',
+            'best_zone_perm': 'perm', 
+            'best_zone_GR': 'GR',
+            'best_zone_Z': 'Z',
+            'best_zone_quality': 'depth_rock_quality'
+        }
+        for new_col, orig_col in best_zone_cols.items():
+            if orig_col in best_zone.columns:
+                aggregated = aggregated.merge(
+                    best_zone[['Well_ID', orig_col]].rename(columns={orig_col: new_col}),
+                    on='Well_ID', how='left'
+                )
+        
+        # Also get worst zone to capture heterogeneity
+        worst_zone = df_temp.loc[df_temp.groupby('Well_ID')['depth_rock_quality'].idxmin()]
+        aggregated = aggregated.merge(
+            worst_zone[['Well_ID', 'phi']].rename(columns={'phi': 'worst_zone_phi'}),
+            on='Well_ID', how='left'
+        )
+        
+        # Quality contrast: difference between best and worst zones
+        if 'best_zone_phi' in aggregated.columns and 'worst_zone_phi' in aggregated.columns:
+            aggregated['zone_quality_contrast'] = aggregated['best_zone_phi'] - aggregated['worst_zone_phi']
+    
     return aggregated
 
 @st.cache_data
@@ -646,6 +680,43 @@ elif page == "4. Feature Engineering":
                 ).sum(axis=1)
                 
                 st.success(f"Analog features created! Found {len(good_producers)} good producer wells (top 25%)")
+            
+            # SPATIAL PROXIMITY TO HIGH-PRODUCTION REGIONS
+            # User observation: Left side (low X) has higher production, especially corners
+            st.info("Creating spatial proximity features...")
+            
+            if 'X' in df.columns and 'Y' in df.columns and 'Target_3yr_Oil_BBL' in df.columns:
+                # Identify high-production region centroids from training data
+                high_prod_wells = df[df['Target_3yr_Oil_BBL'] >= df['Target_3yr_Oil_BBL'].quantile(0.75)]
+                
+                # Calculate centroid of high-production region
+                high_prod_centroid_x = high_prod_wells['X'].mean()
+                high_prod_centroid_y = high_prod_wells['Y'].mean()
+                
+                # Distance to high-production centroid (lower = closer to good area)
+                for dataset in [df, test_df]:
+                    dataset['dist_to_high_prod_region'] = np.sqrt(
+                        (dataset['X'] - high_prod_centroid_x)**2 + 
+                        (dataset['Y'] - high_prod_centroid_y)**2
+                    )
+                    # Inverse: proximity score (higher = closer to good area)
+                    dataset['proximity_to_high_prod'] = 1 / (1 + dataset['dist_to_high_prod_region'])
+                    
+                    # Distance to left edge (low X = high production area)
+                    dataset['dist_from_left'] = dataset['X'] - df['X'].min()
+                    dataset['left_region_score'] = 1 / (1 + dataset['dist_from_left'])
+                    
+                    # Inverse distance weighted production proxy (spatial)
+                    if 'Target_3yr_Oil_BBL' in df.columns:
+                        from scipy.spatial.distance import cdist
+                        train_coords = df[['X', 'Y']].values
+                        test_coords = dataset[['X', 'Y']].values
+                        spatial_dists = cdist(test_coords, train_coords, metric='euclidean')
+                        spatial_weights = 1 / (spatial_dists + 1)
+                        spatial_weights = spatial_weights / spatial_weights.sum(axis=1, keepdims=True)
+                        dataset['spatial_production_proxy'] = (spatial_weights * df['Target_3yr_Oil_BBL'].values).sum(axis=1)
+                
+                st.success(f"Spatial proximity features created! High-prod centroid at X={high_prod_centroid_x:.1f}, Y={high_prod_centroid_y:.1f}")
             
             st.session_state.train_df = df
             st.session_state.test_df = test_df

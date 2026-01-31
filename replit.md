@@ -162,6 +162,26 @@ streamlit run app.py --server.port 5000
 
 Nataly (Hackathon Architect): "Look for correlation of known wells in good sand/rock that historically produced oil to the training wells."
 
+### Spatial Proximity Features:
+| Feature | Description |
+|---------|-------------|
+| **proximity_to_high_prod** | 1 / (1 + dist_to_high_prod_centroid) |
+| **left_region_score** | 1 / (1 + dist_from_left_edge) - left side produces more |
+| **spatial_production_proxy** | Inverse-distance weighted avg of nearby production |
+
+User observation: Left side of map (low X) has higher production, especially bottom-left and top-left corners.
+
+### Best Zone Features (Preserve Depth Heterogeneity):
+| Feature | Description |
+|---------|-------------|
+| **best_zone_phi** | Porosity at best rock quality depth |
+| **best_zone_perm** | Permeability at best rock quality depth |
+| **best_zone_GR** | Gamma Ray at best rock quality depth |
+| **best_zone_quality** | Rock quality score at best depth |
+| **zone_quality_contrast** | best_zone_phi - worst_zone_phi |
+
+Note: Instead of just averaging all depths, we extract features from the "pay zone" (best rock quality depth) to preserve important depth-level heterogeneity.
+
 ### Spatial:
 - **X, Y** - Well coordinates
 - **sand_proportion** - From 2D seismic map
