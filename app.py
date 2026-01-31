@@ -396,13 +396,28 @@ elif page == "5. Model Training":
     else:
         st.subheader("Model Configuration")
         
+        tuning_mode = st.radio(
+            "Hyperparameter Tuning Mode:",
+            ["Manual", "Optuna (Auto-Tune)"],
+            help="Optuna automatically finds optimal hyperparameters using Bayesian optimization"
+        )
+        
         col1, col2 = st.columns(2)
-        with col1:
-            n_estimators = st.slider("Number of Trees", 50, 300, 100, 50)
-            max_depth = st.selectbox("Max Depth", [None, 5, 10, 15, 20], index=0)
-        with col2:
-            min_samples_split = st.slider("Min Samples Split", 2, 20, 2)
-            cv_folds = st.slider("Cross-Validation Folds", 3, 10, 5)
+        
+        if tuning_mode == "Manual":
+            with col1:
+                n_estimators = st.slider("Number of Trees", 50, 300, 100, 50)
+                max_depth = st.selectbox("Max Depth", [None, 5, 10, 15, 20], index=0)
+            with col2:
+                min_samples_split = st.slider("Min Samples Split", 2, 20, 2)
+                cv_folds = st.slider("Cross-Validation Folds", 3, 10, 5)
+        else:
+            with col1:
+                n_trials = st.slider("Optuna Trials", 10, 100, 30, 10, 
+                    help="More trials = better tuning but slower")
+                cv_folds = st.slider("Cross-Validation Folds", 3, 10, 5)
+            with col2:
+                st.info("Optuna will search:\n- n_estimators: 50-300\n- max_depth: 3-20\n- min_samples_split: 2-20")
         
         targets = ['Grid', 'Diesel', 'CNG']
         selected_targets = st.multiselect("Select Targets to Train:", targets, default=targets)
@@ -438,37 +453,67 @@ elif page == "5. Model Training":
             
             progress_bar = st.progress(0)
             results = []
+            optuna_params = {}
             
             for i, target in enumerate(selected_targets):
-                with st.spinner(f"Training {target} model..."):
-                    y = train_df[target].fillna(0)
+                y = train_df[target].fillna(0)
+                
+                if tuning_mode == "Optuna (Auto-Tune)":
+                    import optuna
+                    optuna.logging.set_verbosity(optuna.logging.WARNING)
                     
-                    model = RandomForestRegressor(
-                        n_estimators=n_estimators,
-                        max_depth=max_depth,
-                        min_samples_split=min_samples_split,
-                        random_state=42,
-                        n_jobs=-1
-                    )
-                    
-                    cv_scores = cross_val_score(model, X_features, y, cv=cv_folds, scoring='r2')
-                    
-                    model.fit(X_features, y)
-                    
-                    y_pred = model.predict(X_features)
-                    residuals = y - y_pred
-                    
-                    st.session_state.models[target] = model
-                    st.session_state.residuals[target] = residuals.values
-                    
-                    results.append({
-                        'Target': target,
-                        'CV R² Mean': cv_scores.mean(),
-                        'CV R² Std': cv_scores.std(),
-                        'Train R²': r2_score(y, y_pred),
-                        'Train MAE': mean_absolute_error(y, y_pred),
-                        'Train RMSE': np.sqrt(mean_squared_error(y, y_pred))
-                    })
+                    with st.spinner(f"Optuna tuning {target} model ({n_trials} trials)..."):
+                        def objective(trial):
+                            params = {
+                                'n_estimators': trial.suggest_int('n_estimators', 50, 300),
+                                'max_depth': trial.suggest_int('max_depth', 3, 20),
+                                'min_samples_split': trial.suggest_int('min_samples_split', 2, 20),
+                                'random_state': 42,
+                                'n_jobs': -1
+                            }
+                            model = RandomForestRegressor(**params)
+                            scores = cross_val_score(model, X_features, y, cv=cv_folds, scoring='r2')
+                            return scores.mean()
+                        
+                        study = optuna.create_study(direction='maximize')
+                        study.optimize(objective, n_trials=n_trials, show_progress_bar=False)
+                        
+                        best_params = study.best_params
+                        best_params['random_state'] = 42
+                        best_params['n_jobs'] = -1
+                        optuna_params[target] = best_params
+                        
+                        model = RandomForestRegressor(**best_params)
+                        cv_scores = cross_val_score(model, X_features, y, cv=cv_folds, scoring='r2')
+                        model.fit(X_features, y)
+                        
+                        st.success(f"{target}: Best params found - n_estimators={best_params['n_estimators']}, max_depth={best_params['max_depth']}, min_samples_split={best_params['min_samples_split']}")
+                else:
+                    with st.spinner(f"Training {target} model..."):
+                        model = RandomForestRegressor(
+                            n_estimators=n_estimators,
+                            max_depth=max_depth,
+                            min_samples_split=min_samples_split,
+                            random_state=42,
+                            n_jobs=-1
+                        )
+                        cv_scores = cross_val_score(model, X_features, y, cv=cv_folds, scoring='r2')
+                        model.fit(X_features, y)
+                
+                y_pred = model.predict(X_features)
+                residuals = y - y_pred
+                
+                st.session_state.models[target] = model
+                st.session_state.residuals[target] = residuals.values
+                
+                results.append({
+                    'Target': target,
+                    'CV R² Mean': cv_scores.mean(),
+                    'CV R² Std': cv_scores.std(),
+                    'Train R²': r2_score(y, y_pred),
+                    'Train MAE': mean_absolute_error(y, y_pred),
+                    'Train RMSE': np.sqrt(mean_squared_error(y, y_pred))
+                })
                     
                 progress_bar.progress((i + 1) / len(selected_targets))
             
