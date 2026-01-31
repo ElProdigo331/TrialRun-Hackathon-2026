@@ -191,21 +191,57 @@ elif page == "2. Data Cleaning & Imputation":
         categorical_cols = train_df.select_dtypes(include=['object']).columns.tolist()
         categorical_cols = [c for c in categorical_cols if c not in ['Well Name']]
         
-        st.markdown("**Numeric Columns:** Fill with median")
-        st.markdown("**Categorical Columns:** Fill with mode")
+        imputation_method = st.radio(
+            "Choose Imputation Method:",
+            ["Simple (Median/Mode)", "MICE (Multivariate Imputation by Chained Equations)"],
+            help="MICE uses relationships between features for smarter imputation - recommended by hackathon host!"
+        )
+        
+        if imputation_method == "Simple (Median/Mode)":
+            st.markdown("**Numeric Columns:** Fill with median")
+            st.markdown("**Categorical Columns:** Fill with mode")
+        else:
+            st.markdown("**MICE:** Uses all features to predict missing values iteratively")
+            st.markdown("*Preserves correlations between features - more sophisticated than simple imputation*")
         
         if st.button("Apply Imputation", type="primary"):
-            for col in numeric_cols:
-                median_val = train_df[col].median()
-                train_df[col] = train_df[col].fillna(median_val)
-                test_df[col] = test_df[col].fillna(median_val)
+            if imputation_method == "MICE (Multivariate Imputation by Chained Equations)":
+                from sklearn.experimental import enable_iterative_imputer
+                from sklearn.impute import IterativeImputer
                 
-            for col in categorical_cols:
-                if col in train_df.columns:
-                    mode_val = train_df[col].mode()[0] if len(train_df[col].mode()) > 0 else 'Unknown'
-                    train_df[col] = train_df[col].fillna(mode_val)
-                    if col in test_df.columns:
-                        test_df[col] = test_df[col].fillna(mode_val)
+                with st.spinner("Applying MICE imputation (this may take a moment)..."):
+                    mice_imputer = IterativeImputer(random_state=42, max_iter=10)
+                    
+                    train_numeric = train_df[numeric_cols].copy()
+                    test_numeric = test_df[[c for c in numeric_cols if c in test_df.columns]].copy()
+                    
+                    mice_imputer.fit(train_numeric)
+                    train_df[numeric_cols] = mice_imputer.transform(train_numeric)
+                    
+                    test_num_cols = [c for c in numeric_cols if c in test_df.columns]
+                    if test_num_cols:
+                        test_df[test_num_cols] = mice_imputer.transform(test_df[test_num_cols])
+                    
+                    for col in categorical_cols:
+                        if col in train_df.columns:
+                            mode_val = train_df[col].mode()[0] if len(train_df[col].mode()) > 0 else 'Unknown'
+                            train_df[col] = train_df[col].fillna(mode_val)
+                            if col in test_df.columns:
+                                test_df[col] = test_df[col].fillna(mode_val)
+                    
+                    st.success("MICE imputation complete!")
+            else:
+                for col in numeric_cols:
+                    median_val = train_df[col].median()
+                    train_df[col] = train_df[col].fillna(median_val)
+                    test_df[col] = test_df[col].fillna(median_val)
+                    
+                for col in categorical_cols:
+                    if col in train_df.columns:
+                        mode_val = train_df[col].mode()[0] if len(train_df[col].mode()) > 0 else 'Unknown'
+                        train_df[col] = train_df[col].fillna(mode_val)
+                        if col in test_df.columns:
+                            test_df[col] = test_df[col].fillna(mode_val)
             
             target_cols = ['Grid', 'Diesel', 'CNG']
             for col in target_cols:
