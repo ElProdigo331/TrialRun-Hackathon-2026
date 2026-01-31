@@ -22,43 +22,95 @@ def get_openai_client():
     )
 
 st.set_page_config(
-    page_title="Energy AI Hackathon Workflow",
-    page_icon="⚡",
+    page_title="Oil Production Prediction - Energy AI 2026",
+    page_icon="🛢️",
     layout="wide"
 )
 
-st.title("⚡ Energy AI Hackathon 2026 Workflow")
-st.markdown("**Complete ML Pipeline for Predicting Energy Usage in Hydraulic Fracturing Operations**")
+st.title("🛢️ Energy AI Hackathon 2026")
+st.markdown("**Predict 3-Year Cumulative Oil Production for 12 Preproduction Wells**")
 
 DATA_DIR = "data"
 OUTPUT_DIR = "outputs"
 
 @st.cache_data
-def load_data(train_path, test_path):
-    train_df = pd.read_csv(train_path)
-    test_df = pd.read_csv(test_path)
-    train_df.columns = train_df.columns.str.strip()
-    test_df.columns = test_df.columns.str.strip()
-    return train_df, test_df
+def load_2026_data():
+    prod_wells = pd.read_csv(f"{DATA_DIR}/Well_log_data_production_wells.csv")
+    preprod_wells = pd.read_csv(f"{DATA_DIR}/Well_log_data_preproduction_wells.csv")
+    prod_history = pd.read_csv(f"{DATA_DIR}/Production_history_production_wells.csv")
+    sand_map = np.load(f"{DATA_DIR}/2d_sand_proportion.npy")
+    solution_template = pd.read_csv(f"{DATA_DIR}/solution.csv")
+    return prod_wells, preprod_wells, prod_history, sand_map, solution_template
 
-def get_feature_columns(df):
-    exclude_cols = ['Well Name', 'Grid', 'Diesel', 'CNG', 'Fuel Type']
-    feature_cols = [c for c in df.columns if c not in exclude_cols]
-    return feature_cols
+@st.cache_data
+def aggregate_well_logs(well_logs_df):
+    numeric_cols = ['AI', 'SI', 'Vp', 'Vs', 'rho_b', 'rho_f', 'rho_m', 
+                    'K0', 'Kdry', 'Kf', 'Ksat', 'G0', 'Gdry', 'Gsat', 
+                    'phi', 'perm', 'GR']
+    
+    agg_dict = {}
+    for col in numeric_cols:
+        if col in well_logs_df.columns:
+            agg_dict[f'{col}_mean'] = (col, 'mean')
+            agg_dict[f'{col}_std'] = (col, 'std')
+            agg_dict[f'{col}_min'] = (col, 'min')
+            agg_dict[f'{col}_max'] = (col, 'max')
+    
+    agg_dict['X'] = ('X', 'first')
+    agg_dict['Y'] = ('Y', 'first')
+    agg_dict['Z_min'] = ('Z', 'min')
+    agg_dict['Z_max'] = ('Z', 'max')
+    agg_dict['depth_range'] = ('Z', lambda x: x.max() - x.min())
+    agg_dict['n_measurements'] = ('Z', 'count')
+    
+    aggregated = well_logs_df.groupby('Well_ID').agg(**agg_dict).reset_index()
+    
+    if 'facies' in well_logs_df.columns:
+        facies_pivot = well_logs_df.groupby(['Well_ID', 'facies']).size().unstack(fill_value=0)
+        facies_pivot = facies_pivot.div(facies_pivot.sum(axis=1), axis=0)
+        facies_pivot.columns = [f'facies_{int(c)}_pct' for c in facies_pivot.columns]
+        aggregated = aggregated.merge(facies_pivot.reset_index(), on='Well_ID', how='left')
+    
+    return aggregated
+
+@st.cache_data
+def calculate_3year_targets(prod_history):
+    prod_history['Date'] = pd.to_datetime(prod_history['Date'])
+    
+    targets = []
+    for well_id in prod_history['Well_ID'].unique():
+        well_data = prod_history[prod_history['Well_ID'] == well_id].sort_values('Date')
+        start_date = well_data['Date'].min()
+        end_date = start_date + pd.DateOffset(years=3)
+        
+        within_3yr = well_data[well_data['Date'] <= end_date]
+        if len(within_3yr) > 0:
+            final_oil = within_3yr['Cumulative Oil Production, BBL'].iloc[-1]
+            targets.append({'Well_ID': well_id, 'Target_3yr_Oil_BBL': final_oil})
+    
+    return pd.DataFrame(targets)
+
+def lookup_sand_proportion(df, sand_map):
+    x_coords = df['X'].values
+    y_coords = df['Y'].values
+    
+    x_scaled = np.clip((x_coords / x_coords.max() * (sand_map.shape[1] - 1)).astype(int), 0, sand_map.shape[1] - 1)
+    y_scaled = np.clip((y_coords / y_coords.max() * (sand_map.shape[0] - 1)).astype(int), 0, sand_map.shape[0] - 1)
+    
+    sand_values = sand_map[y_scaled, x_scaled]
+    return sand_values
 
 sidebar = st.sidebar
 sidebar.header("Navigation")
 
 pages = [
-    "1. Data Upload & Inspection",
-    "2. Data Cleaning & Imputation", 
+    "1. Data Loading & Aggregation",
+    "2. Data Cleaning (MICE)", 
     "3. Exploratory Data Analysis",
     "4. Feature Engineering",
     "5. Model Training",
-    "6. Uncertainty Quantification",
-    "7. Generate Predictions",
-    "8. Hackathon Quick Start",
-    "9. AI ML Assistant"
+    "6. Generate Solution",
+    "7. AI Assistant"
 ]
 
 page = sidebar.radio("Select Step:", pages)
@@ -67,96 +119,87 @@ if 'train_df' not in st.session_state:
     st.session_state.train_df = None
 if 'test_df' not in st.session_state:
     st.session_state.test_df = None
-if 'cleaned_train' not in st.session_state:
-    st.session_state.cleaned_train = None
-if 'cleaned_test' not in st.session_state:
-    st.session_state.cleaned_test = None
-if 'models' not in st.session_state:
-    st.session_state.models = {}
+if 'targets' not in st.session_state:
+    st.session_state.targets = None
+if 'sand_map' not in st.session_state:
+    st.session_state.sand_map = None
+if 'solution_template' not in st.session_state:
+    st.session_state.solution_template = None
+if 'model' not in st.session_state:
+    st.session_state.model = None
 if 'residuals' not in st.session_state:
-    st.session_state.residuals = {}
-if 'predictions' not in st.session_state:
-    st.session_state.predictions = None
+    st.session_state.residuals = None
+if 'feature_cols' not in st.session_state:
+    st.session_state.feature_cols = None
 
-if page == "1. Data Upload & Inspection":
-    st.header("Step 1: Data Upload & Initial Inspection")
+if page == "1. Data Loading & Aggregation":
+    st.header("Step 1: Data Loading & Well Log Aggregation")
     
-    st.subheader("Upload Data Files")
-    col1, col2 = st.columns(2)
+    st.markdown("""
+    **2026 Hackathon Problem:**
+    - Predict **3-year cumulative oil production (BBL)** for **12 preproduction wells** (IDs 72-83)
+    - Training data: 71 production wells with ~21 depth measurements each
+    - Must aggregate depth measurements to one feature vector per well
+    """)
     
-    with col1:
-        st.markdown("**Training Data**")
-        train_file = st.file_uploader("Upload training CSV", type=['csv'], key='train')
-        if os.path.exists(f"{DATA_DIR}/HackathonData2025.csv"):
-            use_default_train = st.checkbox("Use 2025 training data", value=True)
-        else:
-            use_default_train = False
+    if st.button("Load 2026 Hackathon Data", type="primary"):
+        with st.spinner("Loading data files..."):
+            prod_wells, preprod_wells, prod_history, sand_map, solution_template = load_2026_data()
             
-    with col2:
-        st.markdown("**Test Data**")
-        test_file = st.file_uploader("Upload test CSV", type=['csv'], key='test')
-        if os.path.exists(f"{DATA_DIR}/testing.csv"):
-            use_default_test = st.checkbox("Use 2025 test data", value=True)
-        else:
-            use_default_test = False
-    
-    if st.button("Load Data", type="primary"):
-        if use_default_train and use_default_test:
-            train_path = f"{DATA_DIR}/HackathonData2025.csv"
-            test_path = f"{DATA_DIR}/testing.csv"
-            st.session_state.train_df, st.session_state.test_df = load_data(train_path, test_path)
-            st.success("Loaded 2025 hackathon data successfully!")
-        elif train_file and test_file:
-            st.session_state.train_df = pd.read_csv(train_file)
-            st.session_state.test_df = pd.read_csv(test_file)
-            st.session_state.train_df.columns = st.session_state.train_df.columns.str.strip()
-            st.session_state.test_df.columns = st.session_state.test_df.columns.str.strip()
-            st.success("Uploaded data loaded successfully!")
-        else:
-            st.error("Please select data sources")
+            st.session_state.sand_map = sand_map
+            st.session_state.solution_template = solution_template
+            
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Production Wells (Training)", prod_wells['Well_ID'].nunique())
+            st.metric("Raw Rows", len(prod_wells))
+        with col2:
+            st.metric("Preproduction Wells (Test)", preprod_wells['Well_ID'].nunique())
+            st.metric("Raw Rows", len(preprod_wells))
+        with col3:
+            st.metric("Production History Rows", len(prod_history))
+            st.metric("Sand Map Shape", f"{sand_map.shape}")
+        
+        st.subheader("Aggregating Well Logs (Multi-Row → One Row per Well)")
+        
+        with st.spinner("Aggregating well logs..."):
+            train_agg = aggregate_well_logs(prod_wells)
+            test_agg = aggregate_well_logs(preprod_wells)
+            
+        with st.spinner("Calculating 3-year oil production targets..."):
+            targets = calculate_3year_targets(prod_history)
+            train_agg = train_agg.merge(targets, on='Well_ID', how='left')
+        
+        with st.spinner("Looking up sand proportion from map..."):
+            train_agg['sand_proportion'] = lookup_sand_proportion(train_agg, sand_map)
+            test_agg['sand_proportion'] = lookup_sand_proportion(test_agg, sand_map)
+        
+        st.session_state.train_df = train_agg
+        st.session_state.test_df = test_agg
+        st.session_state.targets = targets
+        
+        st.success(f"Data aggregated! Training: {len(train_agg)} wells, Test: {len(test_agg)} wells")
+        
+        st.subheader("Aggregated Training Data Preview")
+        st.dataframe(train_agg.head(10), use_container_width=True)
+        
+        st.subheader("Target Distribution (3-Year Cumulative Oil BBL)")
+        fig = px.histogram(train_agg, x='Target_3yr_Oil_BBL', nbins=20, 
+                          title="Distribution of 3-Year Oil Production")
+        st.plotly_chart(fig, use_container_width=True)
+        
+        col1, col2, col3 = st.columns(3)
+        col1.metric("Min Target", f"{train_agg['Target_3yr_Oil_BBL'].min():,.0f} BBL")
+        col2.metric("Mean Target", f"{train_agg['Target_3yr_Oil_BBL'].mean():,.0f} BBL")
+        col3.metric("Max Target", f"{train_agg['Target_3yr_Oil_BBL'].max():,.0f} BBL")
     
     if st.session_state.train_df is not None:
-        st.subheader("Training Data Overview")
-        df = st.session_state.train_df
-        
-        col1, col2, col3, col4 = st.columns(4)
-        col1.metric("Total Wells", len(df))
-        col2.metric("Features", len(df.columns) - 4)
-        col3.metric("Grid Wells", len(df[df['Fuel Type'] == 'Grid']))
-        col4.metric("DGB Wells", len(df[df['Fuel Type'] == 'DGB']))
-        
-        st.markdown("**First 10 Rows:**")
-        st.dataframe(df.head(10), use_container_width=True)
-        
-        st.markdown("**Data Types & Missing Values:**")
-        info_df = pd.DataFrame({
-            'Column': df.columns,
-            'Type': df.dtypes.values,
-            'Non-Null': df.count().values,
-            'Null': df.isnull().sum().values,
-            'Null %': (df.isnull().sum() / len(df) * 100).round(2).values
-        })
-        st.dataframe(info_df, use_container_width=True)
-        
-        st.markdown("**Numeric Statistics:**")
-        st.dataframe(df.describe(), use_container_width=True)
-        
-        st.subheader("Test Data Overview")
-        test_df = st.session_state.test_df
-        col1, col2 = st.columns(2)
-        col1.metric("Test Wells", len(test_df))
-        col2.metric("Fuel Types", test_df['Fuel Type'].nunique())
-        
-        st.markdown("**Test Data Sample:**")
-        st.dataframe(test_df.head(10), use_container_width=True)
-        
-        st.markdown("**Fuel Type Distribution (Test):**")
-        fuel_counts = test_df['Fuel Type'].value_counts()
-        fig = px.pie(values=fuel_counts.values, names=fuel_counts.index, title="Test Wells by Fuel Type")
-        st.plotly_chart(fig, use_container_width=True)
+        st.subheader("Current Data Status")
+        st.success(f"✅ Training data: {len(st.session_state.train_df)} wells")
+        st.success(f"✅ Test data: {len(st.session_state.test_df)} wells")
 
-elif page == "2. Data Cleaning & Imputation":
-    st.header("Step 2: Data Cleaning & Imputation")
+elif page == "2. Data Cleaning (MICE)":
+    st.header("Step 2: Data Cleaning with MICE Imputation")
     
     if st.session_state.train_df is None:
         st.warning("Please load data in Step 1 first.")
@@ -172,44 +215,50 @@ elif page == "2. Data Cleaning & Imputation":
             missing_train = train_df.isnull().sum()
             missing_train = missing_train[missing_train > 0]
             if len(missing_train) > 0:
-                st.dataframe(pd.DataFrame({'Column': missing_train.index, 'Missing': missing_train.values}))
+                missing_df = pd.DataFrame({
+                    'Column': missing_train.index, 
+                    'Missing': missing_train.values,
+                    'Pct': (missing_train.values / len(train_df) * 100).round(1)
+                })
+                st.dataframe(missing_df)
             else:
-                st.success("No missing values in training data!")
+                st.success("No missing values!")
                 
         with col2:
             st.markdown("**Test Data Missing Values:**")
             missing_test = test_df.isnull().sum()
             missing_test = missing_test[missing_test > 0]
             if len(missing_test) > 0:
-                st.dataframe(pd.DataFrame({'Column': missing_test.index, 'Missing': missing_test.values}))
+                missing_df = pd.DataFrame({
+                    'Column': missing_test.index, 
+                    'Missing': missing_test.values,
+                    'Pct': (missing_test.values / len(test_df) * 100).round(1)
+                })
+                st.dataframe(missing_df)
             else:
-                st.success("No missing values in test data!")
+                st.success("No missing values!")
         
         st.subheader("Imputation Strategy")
         
-        numeric_cols = train_df.select_dtypes(include=[np.number]).columns.tolist()
-        categorical_cols = train_df.select_dtypes(include=['object']).columns.tolist()
-        categorical_cols = [c for c in categorical_cols if c not in ['Well Name']]
-        
         imputation_method = st.radio(
             "Choose Imputation Method:",
-            ["Simple (Median/Mode)", "MICE (Multivariate Imputation by Chained Equations)"],
+            ["Simple (Median)", "MICE (Multivariate Imputation by Chained Equations)"],
+            index=1,
             help="MICE uses relationships between features for smarter imputation - recommended by hackathon host!"
         )
         
-        if imputation_method == "Simple (Median/Mode)":
-            st.markdown("**Numeric Columns:** Fill with median")
-            st.markdown("**Categorical Columns:** Fill with mode")
-        else:
-            st.markdown("**MICE:** Uses all features to predict missing values iteratively")
-            st.markdown("*Preserves correlations between features - more sophisticated than simple imputation*")
+        if imputation_method == "MICE (Multivariate Imputation by Chained Equations)":
+            st.info("**MICE:** Uses all features to predict missing values iteratively. Preserves correlations between features.")
         
         if st.button("Apply Imputation", type="primary"):
+            numeric_cols = train_df.select_dtypes(include=[np.number]).columns.tolist()
+            numeric_cols = [c for c in numeric_cols if c not in ['Well_ID', 'Target_3yr_Oil_BBL']]
+            
             if imputation_method == "MICE (Multivariate Imputation by Chained Equations)":
                 from sklearn.experimental import enable_iterative_imputer
                 from sklearn.impute import IterativeImputer
                 
-                with st.spinner("Applying MICE imputation (this may take a moment)..."):
+                with st.spinner("Applying MICE imputation..."):
                     mice_imputer = IterativeImputer(random_state=42, max_iter=10)
                     
                     train_numeric = train_df[numeric_cols].copy()
@@ -222,178 +271,147 @@ elif page == "2. Data Cleaning & Imputation":
                     if test_num_cols:
                         test_df[test_num_cols] = mice_imputer.transform(test_df[test_num_cols])
                     
-                    for col in categorical_cols:
-                        if col in train_df.columns:
-                            mode_val = train_df[col].mode()[0] if len(train_df[col].mode()) > 0 else 'Unknown'
-                            train_df[col] = train_df[col].fillna(mode_val)
-                            if col in test_df.columns:
-                                test_df[col] = test_df[col].fillna(mode_val)
-                    
                     st.success("MICE imputation complete!")
             else:
-                for col in numeric_cols:
-                    median_val = train_df[col].median()
-                    train_df[col] = train_df[col].fillna(median_val)
-                    test_df[col] = test_df[col].fillna(median_val)
-                    
-                for col in categorical_cols:
-                    if col in train_df.columns:
-                        mode_val = train_df[col].mode()[0] if len(train_df[col].mode()) > 0 else 'Unknown'
-                        train_df[col] = train_df[col].fillna(mode_val)
-                        if col in test_df.columns:
-                            test_df[col] = test_df[col].fillna(mode_val)
+                with st.spinner("Applying median imputation..."):
+                    for col in numeric_cols:
+                        if col in train_df.columns:
+                            median_val = train_df[col].median()
+                            train_df[col] = train_df[col].fillna(median_val)
+                            if col in test_df.columns:
+                                test_df[col] = test_df[col].fillna(median_val)
+                    st.success("Median imputation complete!")
             
-            target_cols = ['Grid', 'Diesel', 'CNG']
-            for col in target_cols:
-                if col in train_df.columns:
-                    train_df[col] = train_df[col].fillna(0)
-                if col in test_df.columns:
-                    test_df[col] = test_df[col].fillna(0)
+            train_df = train_df.fillna(0)
+            test_df = test_df.fillna(0)
             
-            st.session_state.cleaned_train = train_df
-            st.session_state.cleaned_test = test_df
+            st.session_state.train_df = train_df
+            st.session_state.test_df = test_df
             
-            st.success("Imputation complete! Data cleaned and ready for analysis.")
-            
-            remaining_missing = train_df.isnull().sum().sum() + test_df.isnull().sum().sum()
-            st.metric("Remaining Missing Values", remaining_missing)
+            remaining = train_df.isnull().sum().sum() + test_df.isnull().sum().sum()
+            st.metric("Remaining Missing Values", remaining)
 
 elif page == "3. Exploratory Data Analysis":
     st.header("Step 3: Exploratory Data Analysis")
     
-    df = st.session_state.cleaned_train if st.session_state.cleaned_train is not None else st.session_state.train_df
-    
-    if df is None:
+    if st.session_state.train_df is None:
         st.warning("Please load data in Step 1 first.")
     else:
-        tab1, tab2, tab3 = st.tabs(["Target Distributions", "Feature Analysis", "Correlations"])
+        df = st.session_state.train_df
+        
+        tab1, tab2, tab3 = st.tabs(["Target Analysis", "Feature Analysis", "Correlations"])
         
         with tab1:
-            st.subheader("Energy Consumption Distributions")
+            st.subheader("3-Year Oil Production Distribution")
             
-            col1, col2, col3 = st.columns(3)
+            fig = px.histogram(df, x='Target_3yr_Oil_BBL', nbins=25, 
+                              title="Distribution of 3-Year Cumulative Oil Production (BBL)")
+            st.plotly_chart(fig, use_container_width=True)
             
-            with col1:
-                fig = px.histogram(df[df['Grid'] > 0], x='Grid', nbins=30, title="Grid Energy (kWh)")
-                st.plotly_chart(fig, use_container_width=True)
-                
-            with col2:
-                fig = px.histogram(df[df['Diesel'] > 0], x='Diesel', nbins=30, title="Diesel (gal)")
-                st.plotly_chart(fig, use_container_width=True)
-                
-            with col3:
-                fig = px.histogram(df[df['CNG'] > 0], x='CNG', nbins=30, title="CNG (MMBTU)")
-                st.plotly_chart(fig, use_container_width=True)
+            col1, col2, col3, col4 = st.columns(4)
+            col1.metric("Min", f"{df['Target_3yr_Oil_BBL'].min():,.0f}")
+            col2.metric("Mean", f"{df['Target_3yr_Oil_BBL'].mean():,.0f}")
+            col3.metric("Median", f"{df['Target_3yr_Oil_BBL'].median():,.0f}")
+            col4.metric("Max", f"{df['Target_3yr_Oil_BBL'].max():,.0f}")
             
-            st.subheader("Energy by Fuel Type")
-            fuel_stats = df.groupby('Fuel Type')[['Grid', 'Diesel', 'CNG']].mean().reset_index()
-            fig = px.bar(fuel_stats.melt(id_vars='Fuel Type'), x='Fuel Type', y='value', 
-                        color='variable', barmode='group', title="Average Energy by Fuel Type")
+            st.subheader("Spatial Distribution")
+            fig = px.scatter(df, x='X', y='Y', color='Target_3yr_Oil_BBL',
+                           size='Target_3yr_Oil_BBL', hover_data=['Well_ID'],
+                           title="Well Locations Colored by Oil Production",
+                           color_continuous_scale='Viridis')
             st.plotly_chart(fig, use_container_width=True)
         
         with tab2:
-            st.subheader("Feature Distributions")
+            st.subheader("Key Petrophysical Features")
             
-            numeric_features = ['# Stages', '# Clusters', 'Estimated Average Stage Time', 
-                              'Actual Average Stage Time', 'Ambient Temperature']
-            available_features = [f for f in numeric_features if f in df.columns]
+            key_features = ['phi_mean', 'perm_mean', 'GR_mean', 'AI_mean', 'sand_proportion']
+            available = [f for f in key_features if f in df.columns]
             
-            selected_feature = st.selectbox("Select Feature:", available_features)
+            selected_feature = st.selectbox("Select Feature:", available)
             
             col1, col2 = st.columns(2)
             with col1:
-                fig = px.histogram(df, x=selected_feature, nbins=30, title=f"{selected_feature} Distribution")
+                fig = px.histogram(df, x=selected_feature, nbins=25, 
+                                  title=f"{selected_feature} Distribution")
                 st.plotly_chart(fig, use_container_width=True)
-                
             with col2:
-                fig = px.box(df, x='Fuel Type', y=selected_feature, title=f"{selected_feature} by Fuel Type")
+                fig = px.scatter(df, x=selected_feature, y='Target_3yr_Oil_BBL',
+                               title=f"{selected_feature} vs Oil Production",
+                               trendline="ols")
                 st.plotly_chart(fig, use_container_width=True)
-            
-            st.subheader("Feature vs Energy Scatter Plots")
-            target = st.selectbox("Select Target:", ['Grid', 'Diesel', 'CNG'])
-            
-            filtered_df = df[df[target] > 0] if target in df.columns else df
-            
-            fig = px.scatter(filtered_df, x=selected_feature, y=target, color='Fuel Type',
-                           title=f"{selected_feature} vs {target}", hover_data=['Well Name'])
-            st.plotly_chart(fig, use_container_width=True)
         
         with tab3:
-            st.subheader("Feature Correlations")
+            st.subheader("Feature Correlations with Target")
             
             numeric_df = df.select_dtypes(include=[np.number])
-            corr_matrix = numeric_df.corr()
-            
-            fig = px.imshow(corr_matrix, text_auto='.2f', aspect='auto',
-                          title="Correlation Heatmap", color_continuous_scale='RdBu_r')
-            st.plotly_chart(fig, use_container_width=True)
-            
-            st.subheader("Top Correlations with Targets")
-            for target in ['Grid', 'Diesel', 'CNG']:
-                if target in corr_matrix.columns:
-                    correlations = corr_matrix[target].drop(['Grid', 'Diesel', 'CNG'], errors='ignore')
-                    correlations = correlations.abs().sort_values(ascending=False).head(5)
-                    st.markdown(f"**{target}:** {', '.join([f'{c} ({v:.2f})' for c, v in correlations.items()])}")
+            if 'Target_3yr_Oil_BBL' in numeric_df.columns:
+                correlations = numeric_df.corr()['Target_3yr_Oil_BBL'].drop('Target_3yr_Oil_BBL')
+                correlations = correlations.abs().sort_values(ascending=False).head(20)
+                
+                fig = px.bar(x=correlations.values, y=correlations.index, orientation='h',
+                           title="Top 20 Features Correlated with Oil Production",
+                           labels={'x': 'Absolute Correlation', 'y': 'Feature'})
+                fig.update_layout(yaxis={'categoryorder': 'total ascending'})
+                st.plotly_chart(fig, use_container_width=True)
+                
+                st.subheader("Top 10 Correlations")
+                for feat, corr in correlations.head(10).items():
+                    st.markdown(f"- **{feat}**: {corr:.3f}")
 
 elif page == "4. Feature Engineering":
     st.header("Step 4: Feature Engineering")
     
-    df = st.session_state.cleaned_train if st.session_state.cleaned_train is not None else st.session_state.train_df
-    test_df = st.session_state.cleaned_test if st.session_state.cleaned_test is not None else st.session_state.test_df
-    
-    if df is None:
-        st.warning("Please load and clean data first.")
+    if st.session_state.train_df is None:
+        st.warning("Please load data in Step 1 first.")
     else:
-        st.subheader("Create Engineered Features")
+        df = st.session_state.train_df.copy()
+        test_df = st.session_state.test_df.copy()
         
         st.markdown("""
-        **Proposed Features:**
-        1. **Time Overrun** = Actual Stage Time - Estimated Stage Time (indicates efficiency)
-        2. **Total Pumping Time** = # Stages × Actual Stage Time
-        3. **Clusters per Stage** = # Clusters / # Stages
+        **Current Features (from aggregation):**
+        - Mean, std, min, max of petrophysical logs (phi, perm, AI, GR, etc.)
+        - Spatial features (X, Y, depth range)
+        - Facies percentages
+        - Sand proportion from seismic map
+        """)
+        
+        st.subheader("Additional Feature Engineering")
+        
+        st.markdown("""
+        **Proposed Additional Features:**
+        1. **phi_perm_product** = phi_mean × log(perm_mean) - productivity indicator
+        2. **rock_quality** = phi_mean / GR_mean - reservoir quality index
+        3. **impedance_ratio** = AI_mean / SI_mean - lithology indicator
         """)
         
         if st.button("Apply Feature Engineering", type="primary"):
             for dataset in [df, test_df]:
-                if 'Actual Average Stage Time' in dataset.columns and 'Estimated Average Stage Time' in dataset.columns:
-                    dataset['Time_Overrun'] = dataset['Actual Average Stage Time'] - dataset['Estimated Average Stage Time']
-                    dataset['Time_Overrun'] = dataset['Time_Overrun'].fillna(0)
+                if 'phi_mean' in dataset.columns and 'perm_mean' in dataset.columns:
+                    dataset['phi_perm_product'] = dataset['phi_mean'] * np.log1p(dataset['perm_mean'])
                 
-                if '# Stages' in dataset.columns and 'Actual Average Stage Time' in dataset.columns:
-                    dataset['Total_Pumping_Time'] = dataset['# Stages'] * dataset['Actual Average Stage Time'].fillna(
-                        dataset['Estimated Average Stage Time'])
-                    dataset['Total_Pumping_Time'] = dataset['Total_Pumping_Time'].fillna(0)
+                if 'phi_mean' in dataset.columns and 'GR_mean' in dataset.columns:
+                    dataset['rock_quality'] = dataset['phi_mean'] / (dataset['GR_mean'] + 1)
                 
-                if '# Clusters' in dataset.columns and '# Stages' in dataset.columns:
-                    dataset['Clusters_per_Stage'] = dataset['# Clusters'] / dataset['# Stages'].replace(0, 1)
+                if 'AI_mean' in dataset.columns and 'SI_mean' in dataset.columns:
+                    dataset['impedance_ratio'] = dataset['AI_mean'] / (dataset['SI_mean'] + 1)
             
-            st.session_state.cleaned_train = df
-            st.session_state.cleaned_test = test_df
-            st.success("Features engineered successfully!")
-        
-        if 'Time_Overrun' in df.columns:
-            st.subheader("Engineered Feature Preview")
-            eng_features = ['Time_Overrun', 'Total_Pumping_Time', 'Clusters_per_Stage']
-            available = [f for f in eng_features if f in df.columns]
-            st.dataframe(df[['Well Name'] + available].head(10), use_container_width=True)
-        
-        st.subheader("Categorical Encoding Preview")
-        cat_cols = ['Frac Fleet', 'Fleet Type', 'Target Formation', 'Field Area', 'Fuel Type', 'Sand Provider']
-        available_cats = [c for c in cat_cols if c in df.columns]
-        
-        st.markdown("These categorical columns will be encoded during model training:")
-        for col in available_cats:
-            unique_vals = df[col].nunique()
-            st.markdown(f"- **{col}**: {unique_vals} unique values")
+            st.session_state.train_df = df
+            st.session_state.test_df = test_df
+            st.success("Feature engineering complete!")
+            
+            st.subheader("New Features Preview")
+            new_cols = ['Well_ID', 'phi_perm_product', 'rock_quality', 'impedance_ratio']
+            available_cols = [c for c in new_cols if c in df.columns]
+            st.dataframe(df[available_cols].head(10), use_container_width=True)
 
 elif page == "5. Model Training":
     st.header("Step 5: Model Training")
     
-    train_df = st.session_state.cleaned_train if st.session_state.cleaned_train is not None else st.session_state.train_df
-    
-    if train_df is None:
-        st.warning("Please load and process data first.")
+    if st.session_state.train_df is None:
+        st.warning("Please load data in Step 1 first.")
     else:
+        train_df = st.session_state.train_df.copy()
+        
         st.subheader("Model Configuration")
         
         tuning_mode = st.radio(
@@ -407,511 +425,197 @@ elif page == "5. Model Training":
         if tuning_mode == "Manual":
             with col1:
                 n_estimators = st.slider("Number of Trees", 50, 300, 100, 50)
-                max_depth = st.selectbox("Max Depth", [None, 5, 10, 15, 20], index=0)
+                max_depth = st.selectbox("Max Depth", [None, 5, 10, 15, 20], index=3)
             with col2:
-                min_samples_split = st.slider("Min Samples Split", 2, 20, 2)
+                min_samples_split = st.slider("Min Samples Split", 2, 20, 5)
                 cv_folds = st.slider("Cross-Validation Folds", 3, 10, 5)
         else:
             with col1:
-                n_trials = st.slider("Optuna Trials", 10, 100, 30, 10, 
-                    help="More trials = better tuning but slower")
+                n_trials = st.slider("Optuna Trials", 10, 100, 30, 10)
                 cv_folds = st.slider("Cross-Validation Folds", 3, 10, 5)
             with col2:
                 st.info("Optuna will search:\n- n_estimators: 50-300\n- max_depth: 3-20\n- min_samples_split: 2-20")
         
-        targets = ['Grid', 'Diesel', 'CNG']
-        selected_targets = st.multiselect("Select Targets to Train:", targets, default=targets)
+        exclude_cols = ['Well_ID', 'Target_3yr_Oil_BBL']
+        feature_cols = [c for c in train_df.columns if c not in exclude_cols and train_df[c].dtype in ['float64', 'int64']]
         
-        if st.button("Train Models", type="primary"):
-            feature_cols = ['# Stages', '# Clusters', 'Estimated Average Stage Time', 
-                          'Actual Average Stage Time', 'Ambient Temperature']
+        st.markdown(f"**Features available:** {len(feature_cols)}")
+        
+        if st.button("Train Model", type="primary"):
+            X = train_df[feature_cols].fillna(0)
+            y = train_df['Target_3yr_Oil_BBL']
             
-            eng_features = ['Time_Overrun', 'Total_Pumping_Time', 'Clusters_per_Stage']
-            feature_cols += [f for f in eng_features if f in train_df.columns]
+            st.session_state.feature_cols = feature_cols
             
-            cat_cols = ['Frac Fleet', 'Fleet Type', 'Target Formation', 'Field Area', 'Fuel Type', 'Sand Provider']
-            
-            X = train_df.copy()
-            
-            for col in feature_cols:
-                if col in X.columns:
-                    X[col] = X[col].fillna(X[col].median())
-            
-            label_encoders = {}
-            for col in cat_cols:
-                if col in X.columns:
-                    le = LabelEncoder()
-                    X[col + '_encoded'] = le.fit_transform(X[col].astype(str))
-                    label_encoders[col] = le
-                    feature_cols.append(col + '_encoded')
-            
-            available_features = [f for f in feature_cols if f in X.columns]
-            X_features = X[available_features].fillna(0)
-            
-            st.session_state.label_encoders = label_encoders
-            st.session_state.feature_cols = available_features
-            
-            progress_bar = st.progress(0)
-            results = []
-            optuna_params = {}
-            
-            for i, target in enumerate(selected_targets):
-                y = train_df[target].fillna(0)
+            if tuning_mode == "Optuna (Auto-Tune)":
+                import optuna
+                optuna.logging.set_verbosity(optuna.logging.WARNING)
                 
-                if tuning_mode == "Optuna (Auto-Tune)":
-                    import optuna
-                    optuna.logging.set_verbosity(optuna.logging.WARNING)
+                with st.spinner(f"Optuna tuning model ({n_trials} trials)..."):
+                    def objective(trial):
+                        params = {
+                            'n_estimators': trial.suggest_int('n_estimators', 50, 300),
+                            'max_depth': trial.suggest_int('max_depth', 3, 20),
+                            'min_samples_split': trial.suggest_int('min_samples_split', 2, 20),
+                            'random_state': 42,
+                            'n_jobs': -1
+                        }
+                        model = RandomForestRegressor(**params)
+                        scores = cross_val_score(model, X, y, cv=cv_folds, scoring='r2')
+                        return scores.mean()
                     
-                    with st.spinner(f"Optuna tuning {target} model ({n_trials} trials)..."):
-                        def objective(trial):
-                            params = {
-                                'n_estimators': trial.suggest_int('n_estimators', 50, 300),
-                                'max_depth': trial.suggest_int('max_depth', 3, 20),
-                                'min_samples_split': trial.suggest_int('min_samples_split', 2, 20),
-                                'random_state': 42,
-                                'n_jobs': -1
-                            }
-                            model = RandomForestRegressor(**params)
-                            scores = cross_val_score(model, X_features, y, cv=cv_folds, scoring='r2')
-                            return scores.mean()
-                        
-                        study = optuna.create_study(direction='maximize')
-                        study.optimize(objective, n_trials=n_trials, show_progress_bar=False)
-                        
-                        best_params = study.best_params
-                        best_params['random_state'] = 42
-                        best_params['n_jobs'] = -1
-                        optuna_params[target] = best_params
-                        
-                        model = RandomForestRegressor(**best_params)
-                        cv_scores = cross_val_score(model, X_features, y, cv=cv_folds, scoring='r2')
-                        model.fit(X_features, y)
-                        
-                        st.success(f"{target}: Best params found - n_estimators={best_params['n_estimators']}, max_depth={best_params['max_depth']}, min_samples_split={best_params['min_samples_split']}")
-                else:
-                    with st.spinner(f"Training {target} model..."):
-                        model = RandomForestRegressor(
-                            n_estimators=n_estimators,
-                            max_depth=max_depth,
-                            min_samples_split=min_samples_split,
-                            random_state=42,
-                            n_jobs=-1
-                        )
-                        cv_scores = cross_val_score(model, X_features, y, cv=cv_folds, scoring='r2')
-                        model.fit(X_features, y)
+                    study = optuna.create_study(direction='maximize')
+                    study.optimize(objective, n_trials=n_trials, show_progress_bar=False)
+                    
+                    best_params = study.best_params
+                    best_params['random_state'] = 42
+                    best_params['n_jobs'] = -1
+                    
+                    st.success(f"Best params: n_estimators={best_params['n_estimators']}, max_depth={best_params['max_depth']}, min_samples_split={best_params['min_samples_split']}")
+                    
+                    model = RandomForestRegressor(**best_params)
+            else:
+                model = RandomForestRegressor(
+                    n_estimators=n_estimators,
+                    max_depth=max_depth,
+                    min_samples_split=min_samples_split,
+                    random_state=42,
+                    n_jobs=-1
+                )
+            
+            with st.spinner("Training final model..."):
+                cv_scores = cross_val_score(model, X, y, cv=cv_folds, scoring='r2')
+                model.fit(X, y)
                 
-                y_pred = model.predict(X_features)
+                y_pred = model.predict(X)
                 residuals = y - y_pred
                 
-                st.session_state.models[target] = model
-                st.session_state.residuals[target] = residuals.values
-                
-                results.append({
-                    'Target': target,
-                    'CV R² Mean': cv_scores.mean(),
-                    'CV R² Std': cv_scores.std(),
-                    'Train R²': r2_score(y, y_pred),
-                    'Train MAE': mean_absolute_error(y, y_pred),
-                    'Train RMSE': np.sqrt(mean_squared_error(y, y_pred))
-                })
-                    
-                progress_bar.progress((i + 1) / len(selected_targets))
+                st.session_state.model = model
+                st.session_state.residuals = residuals.values
             
-            st.success("All models trained successfully!")
+            st.success("Model trained successfully!")
             
-            st.subheader("Model Performance")
-            results_df = pd.DataFrame(results)
-            st.dataframe(results_df.round(4), use_container_width=True)
+            col1, col2, col3 = st.columns(3)
+            col1.metric("CV R² Mean", f"{cv_scores.mean():.4f}")
+            col2.metric("CV R² Std", f"{cv_scores.std():.4f}")
+            col3.metric("Train R²", f"{r2_score(y, y_pred):.4f}")
             
             st.subheader("Feature Importance")
-            for target in selected_targets:
-                model = st.session_state.models[target]
-                importance_df = pd.DataFrame({
-                    'Feature': available_features,
-                    'Importance': model.feature_importances_
-                }).sort_values('Importance', ascending=False).head(10)
-                
-                fig = px.bar(importance_df, x='Importance', y='Feature', orientation='h',
-                           title=f"{target} - Top 10 Feature Importances")
+            importance_df = pd.DataFrame({
+                'Feature': feature_cols,
+                'Importance': model.feature_importances_
+            }).sort_values('Importance', ascending=False).head(20)
+            
+            fig = px.bar(importance_df, x='Importance', y='Feature', orientation='h',
+                        title="Top 20 Feature Importances")
+            fig.update_layout(yaxis={'categoryorder': 'total ascending'})
+            st.plotly_chart(fig, use_container_width=True)
+            
+            st.subheader("Residual Analysis")
+            col1, col2 = st.columns(2)
+            with col1:
+                fig = px.histogram(x=residuals, nbins=30, title="Residual Distribution")
+                st.plotly_chart(fig, use_container_width=True)
+            with col2:
+                fig = px.scatter(x=y_pred, y=residuals, title="Residuals vs Predicted",
+                               labels={'x': 'Predicted', 'y': 'Residual'})
+                fig.add_hline(y=0, line_dash="dash", line_color="red")
                 st.plotly_chart(fig, use_container_width=True)
 
-elif page == "6. Uncertainty Quantification":
-    st.header("Step 6: Uncertainty Quantification")
+elif page == "6. Generate Solution":
+    st.header("Step 6: Generate Solution File")
     
-    if not st.session_state.models:
-        st.warning("Please train models in Step 5 first.")
+    if st.session_state.model is None:
+        st.warning("Please train a model in Step 5 first.")
     else:
-        st.subheader("Bootstrap Uncertainty Estimation")
+        model = st.session_state.model
+        test_df = st.session_state.test_df
+        residuals = st.session_state.residuals
+        feature_cols = st.session_state.feature_cols
         
         st.markdown("""
-        **Method: Residual Bootstrapping**
-        
-        For each prediction, we:
-        1. Generate a point estimate using the trained model
-        2. Sample 100 residuals from training with replacement (using `random_state=42` for reproducibility)
-        3. Add sampled residuals to create 100 realizations (Real_1 through Real_100)
-        
-        **Why Residual Bootstrapping?**
-        - Captures both model uncertainty and inherent data variability
-        - Non-parametric approach - makes no assumptions about error distribution
-        - Preserves the empirical error structure from cross-validation
-        - Ensures predictions reflect realistic ranges based on training performance
-        
-        **Reproducibility:** All random operations use `random_state=42` to ensure 
-        identical results when re-running the pipeline.
+        **Solution Requirements:**
+        - 12 rows (Wells 72-83)
+        - Columns: Well_ID, Prediction_BBL, R1-R100
+        - Replace all -9999 values with predictions
         """)
         
-        st.subheader("Residual Distributions")
+        n_realizations = st.slider("Number of Realizations", 10, 100, 100)
         
-        cols = st.columns(len(st.session_state.residuals))
-        for i, (target, residuals) in enumerate(st.session_state.residuals.items()):
-            with cols[i]:
-                fig = px.histogram(x=residuals, nbins=50, title=f"{target} Residuals")
-                st.plotly_chart(fig, use_container_width=True)
-                st.metric(f"{target} Residual Std", f"{np.std(residuals):.2f}")
-        
-        st.subheader("Uncertainty Coverage Analysis")
-        
-        for target, residuals in st.session_state.residuals.items():
-            p5, p95 = np.percentile(residuals, [5, 95])
-            coverage = np.mean((residuals >= p5) & (residuals <= p95)) * 100
-            st.markdown(f"**{target}**: 90% prediction interval covers {coverage:.1f}% of residuals (P5={p5:.1f}, P95={p95:.1f})")
+        if st.button("Generate Predictions", type="primary"):
+            X_test = test_df[feature_cols].fillna(0)
+            
+            point_predictions = model.predict(X_test)
+            
+            realizations = np.zeros((len(test_df), n_realizations))
+            for i in range(n_realizations):
+                sampled_residuals = np.random.choice(residuals, size=len(test_df), replace=True)
+                realizations[:, i] = point_predictions + sampled_residuals
+                realizations[:, i] = np.maximum(realizations[:, i], 0)
+            
+            solution = pd.DataFrame()
+            solution['Well_ID'] = test_df['Well_ID'].values
+            solution['Prediction_BBL'] = point_predictions.round(0).astype(int)
+            
+            for i in range(n_realizations):
+                solution[f'R{i+1}'] = realizations[:, i].round(0).astype(int)
+            
+            os.makedirs(OUTPUT_DIR, exist_ok=True)
+            solution.to_csv(f"{OUTPUT_DIR}/solution.csv", index=False)
+            solution.to_csv(f"{DATA_DIR}/solution.csv", index=False)
+            
+            st.success("Solution generated and saved!")
+            
+            st.subheader("Solution Preview")
+            st.dataframe(solution.head(12), use_container_width=True)
+            
+            st.subheader("Prediction Summary")
+            col1, col2, col3 = st.columns(3)
+            col1.metric("Min Prediction", f"{solution['Prediction_BBL'].min():,.0f} BBL")
+            col2.metric("Mean Prediction", f"{solution['Prediction_BBL'].mean():,.0f} BBL")
+            col3.metric("Max Prediction", f"{solution['Prediction_BBL'].max():,.0f} BBL")
+            
+            st.subheader("Uncertainty Visualization")
+            fig = go.Figure()
+            for idx, row in solution.iterrows():
+                well_id = row['Well_ID']
+                reals = row[[f'R{i+1}' for i in range(min(100, n_realizations))]].values
+                fig.add_trace(go.Box(y=reals, name=f"Well {int(well_id)}", 
+                                    boxpoints=False, marker_color='steelblue'))
+            fig.update_layout(title="Uncertainty Distribution by Well", 
+                            xaxis_title="Well", yaxis_title="Oil Production (BBL)")
+            st.plotly_chart(fig, use_container_width=True)
+            
+            csv_data = solution.to_csv(index=False)
+            st.download_button(
+                label="Download solution.csv",
+                data=csv_data,
+                file_name="solution.csv",
+                mime="text/csv"
+            )
 
-elif page == "7. Generate Predictions":
-    st.header("Step 7: Generate Predictions")
-    
-    if not st.session_state.models:
-        st.warning("Please train models first.")
-    else:
-        test_df = st.session_state.cleaned_test if st.session_state.cleaned_test is not None else st.session_state.test_df
-        
-        if test_df is None:
-            st.warning("No test data loaded.")
-        else:
-            st.subheader("Test Data Summary")
-            st.dataframe(test_df.head(), use_container_width=True)
-            
-            fuel_counts = test_df['Fuel Type'].value_counts()
-            st.markdown(f"**Wells by Fuel Type:** {dict(fuel_counts)}")
-            
-            n_realizations = st.slider("Number of Realizations", 10, 100, 100)
-            
-            if st.button("Generate Predictions", type="primary"):
-                np.random.seed(42)
-                X_test = test_df.copy()
-                
-                feature_cols = st.session_state.feature_cols
-                label_encoders = st.session_state.label_encoders
-                
-                for col, le in label_encoders.items():
-                    if col in X_test.columns:
-                        X_test[col + '_encoded'] = X_test[col].astype(str).map(
-                            lambda x: le.transform([x])[0] if x in le.classes_ else -1
-                        )
-                
-                available = [f for f in feature_cols if f in X_test.columns]
-                X_test_features = X_test[available].fillna(0)
-                
-                results = []
-                
-                progress_bar = st.progress(0)
-                
-                for idx, row in test_df.iterrows():
-                    well_name = row['Well Name']
-                    fuel_type = row['Fuel Type']
-                    
-                    x_single = X_test_features.iloc[[idx - test_df.index[0]]]
-                    
-                    if fuel_type == 'Grid':
-                        targets = [('Grid', 'Grid')]
-                    elif fuel_type == 'Diesel':
-                        targets = [('Diesel', 'Diesel')]
-                    elif fuel_type == 'Turbine':
-                        targets = [('Turbine', 'CNG')]
-                    elif fuel_type == 'DGB':
-                        targets = [('DGB_Diesel', 'Diesel'), ('DGB_CNG', 'CNG')]
-                    else:
-                        targets = [('Grid', 'Grid')]
-                    
-                    for target_name, model_key in targets:
-                        if model_key in st.session_state.models:
-                            model = st.session_state.models[model_key]
-                            residuals = st.session_state.residuals[model_key]
-                            
-                            point_estimate = model.predict(x_single)[0]
-                            
-                            sampled_residuals = np.random.choice(residuals, size=n_realizations, replace=True)
-                            realizations = point_estimate + sampled_residuals
-                            realizations = np.maximum(realizations, 0)
-                            
-                            result = {
-                                'Masked Well Name': well_name,
-                                'Fuel Type': target_name,
-                                'Fuel Value': max(0, point_estimate)
-                            }
-                            for r in range(n_realizations):
-                                result[f'Real_{r+1}'] = realizations[r]
-                            
-                            results.append(result)
-                    
-                    progress_bar.progress((idx - test_df.index[0] + 1) / len(test_df))
-                
-                predictions_df = pd.DataFrame(results)
-                st.session_state.predictions = predictions_df
-                
-                st.success(f"Generated {len(predictions_df)} prediction rows!")
-                
-                st.subheader("Predictions Preview")
-                display_cols = ['Masked Well Name', 'Fuel Type', 'Fuel Value', 'Real_1', 'Real_2', 'Real_3', 'Real_4', 'Real_5']
-                st.dataframe(predictions_df[display_cols].head(20), use_container_width=True)
-                
-                csv = predictions_df.to_csv(index=False)
-                st.download_button(
-                    label="Download Solution CSV",
-                    data=csv,
-                    file_name="solution.csv",
-                    mime="text/csv"
-                )
-                
-                os.makedirs(OUTPUT_DIR, exist_ok=True)
-                predictions_df.to_csv(f"{OUTPUT_DIR}/solution.csv", index=False)
-                st.info(f"Solution saved to {OUTPUT_DIR}/solution.csv")
-
-elif page == "8. Hackathon Quick Start":
-    st.header("Quick Start Guide for 2026 Hackathon")
+elif page == "7. AI Assistant":
+    st.header("🤖 AI ML Assistant")
     
     st.markdown("""
-    ## When the 2026 Hackathon Starts:
-    
-    ### Step 1: Upload New Data
-    1. Go to **Step 1: Data Upload**
-    2. Upload the new training and test CSV files provided
-    3. Review the data structure and any new columns
-    
-    ### Step 2: Quick Data Prep
-    1. Go to **Step 2: Data Cleaning** - Apply imputation
-    2. Go to **Step 4: Feature Engineering** - Apply feature engineering
-    
-    ### Step 3: Train Models
-    1. Go to **Step 5: Model Training**
-    2. Use default settings or tune as needed
-    3. Review performance metrics
-    
-    ### Step 4: Generate Submission
-    1. Go to **Step 7: Generate Predictions**
-    2. Click "Generate Predictions"
-    3. Download the solution CSV
-    
-    ---
-    
-    ## Key Adaptations for 2026:
-    
-    1. **Check new columns** - If new features are added, update the feature list
-    2. **Check target format** - Verify the solution format requirements
-    3. **Check fuel types** - New fuel types may require model adjustments
-    4. **Review uncertainty requirements** - Confirm 100 realizations are still needed
-    
-    ---
-    
-    ## Tips for Success:
-    
-    - **Run EDA first** to understand data patterns
-    - **Check for outliers** in new data
-    - **Cross-validate** to ensure model generalization
-    - **Save your work** - Download the solution immediately after generation
+    Ask me anything about:
+    - The 2026 hackathon problem (oil production prediction)
+    - Feature engineering for petrophysical data
+    - Model selection and tuning
+    - Uncertainty quantification
+    - Adapting to different datasets
     """)
     
-    st.subheader("Current Model Status")
+    if 'chat_history' not in st.session_state:
+        st.session_state.chat_history = []
     
-    if st.session_state.models:
-        for target, model in st.session_state.models.items():
-            st.success(f"{target} model: Trained")
-    else:
-        st.warning("No models trained yet. Complete Steps 1-5 first.")
-    
-    if st.session_state.predictions is not None:
-        st.success(f"Predictions generated: {len(st.session_state.predictions)} rows")
-    else:
-        st.info("No predictions generated yet.")
-
-elif page == "9. AI ML Assistant":
-    st.header("AI-Powered ML Assistant")
-    
-    st.markdown("""
-    **Ask me anything about machine learning, data science, or how to adapt this pipeline!**
-    
-    I can help you with:
-    - Suggesting features for your specific dataset
-    - Recommending ML models for different problem types
-    - Explaining uncertainty quantification methods
-    - Adapting this pipeline to different industries
-    - Troubleshooting model performance issues
-    - Understanding your data patterns
-    """)
-    
-    if 'chat_messages' not in st.session_state:
-        st.session_state.chat_messages = []
-    
-    def get_data_context():
-        context_parts = []
-        
-        if st.session_state.train_df is not None:
-            df = st.session_state.train_df
-            context_parts.append(f"LOADED TRAINING DATA: {len(df)} rows, {len(df.columns)} columns")
-            context_parts.append(f"Columns: {', '.join(df.columns.tolist())}")
-            context_parts.append(f"Numeric columns: {', '.join(df.select_dtypes(include=[np.number]).columns.tolist())}")
-            context_parts.append(f"Categorical columns: {', '.join(df.select_dtypes(include=['object']).columns.tolist())}")
-            
-            if 'Fuel Type' in df.columns:
-                context_parts.append(f"Fuel Types: {df['Fuel Type'].value_counts().to_dict()}")
-            
-            missing = df.isnull().sum()
-            missing = missing[missing > 0]
-            if len(missing) > 0:
-                context_parts.append(f"Missing values: {missing.to_dict()}")
-        
-        if st.session_state.test_df is not None:
-            context_parts.append(f"TEST DATA: {len(st.session_state.test_df)} wells to predict")
-        
-        if st.session_state.models:
-            context_parts.append(f"TRAINED MODELS: {list(st.session_state.models.keys())}")
-            for target, residuals in st.session_state.residuals.items():
-                context_parts.append(f"{target} residual std: {np.std(residuals):.2f}")
-        
-        if st.session_state.predictions is not None:
-            context_parts.append(f"PREDICTIONS: {len(st.session_state.predictions)} rows generated")
-        
-        return "\n".join(context_parts) if context_parts else "No data loaded yet."
-    
-    def get_system_prompt():
-        data_context = get_data_context()
-        
-        return f"""You are an expert ML assistant integrated into the Energy AI Hackathon 2026 workflow application, built by Team Brain Oil.
-
-YOUR TWO ROLES:
-1. TEAM ONBOARDING: Help teammates understand this application and walk them through each step
-2. ML EXPERT: Help adapt the pipeline to any dataset, industry, or problem type
-
-CURRENT APPLICATION STATE:
-{data_context}
-
-=== THIS APPLICATION'S WORKFLOW (9 STEPS) ===
-
-STEP 1 - DATA UPLOAD & INSPECTION:
-- Upload training data (historical wells with energy usage) and test data (wells to predict)
-- View basic statistics, data types, missing values
-- The training data has ~1,082 wells, test data has 50 wells
-
-STEP 2 - DATA CLEANING & IMPUTATION:
-- Handle missing values: median for numbers, mode for categories
-- No rows are dropped - all data is preserved
-
-STEP 3 - EXPLORATORY DATA ANALYSIS (EDA):
-- Visualize energy distributions (histograms)
-- Correlation heatmaps to see relationships
-- Box plots by Fleet Type and Formation
-
-STEP 4 - FEATURE ENGINEERING:
-- Create derived features:
-  * Time_Overrun = Actual Stage Time - Estimated Stage Time
-  * Total_Pumping_Time = Number of Stages × Stage Time
-  * Clusters_per_Stage = Number of Clusters / Number of Stages
-- These capture operational patterns that affect energy usage
-
-STEP 5 - MODEL TRAINING:
-- Train separate Random Forest models for Grid (kWh), Diesel (gal), CNG (MMBTU)
-- Uses 5-fold cross-validation
-- Key insight: Fleet Type determines which fuel a well uses:
-  * Grid fleet → only Grid electricity
-  * Diesel fleet → only Diesel
-  * Turbine fleet → only CNG
-  * DGB fleet → BOTH Diesel AND CNG
-
-STEP 6 - UNCERTAINTY QUANTIFICATION:
-- Residual bootstrapping: sample 100 residuals and add to predictions
-- This creates 100 "realizations" showing the range of possible outcomes
-- Gives operators a planning buffer, not just a single number
-
-STEP 7 - GENERATE PREDICTIONS:
-- Creates solution.csv with columns: Masked Well Name, Fuel Type, Fuel Value, Real_1 through Real_100
-- DGB wells generate TWO rows (one for Diesel, one for CNG)
-- Total: 63 rows for 50 wells (13 DGB wells × 2 = 26, plus 37 single-fuel wells)
-
-STEP 8 - QUICK START GUIDE:
-- Instructions for hackathon execution
-
-STEP 9 - AI ML ASSISTANT (this chat):
-- That's me! Here to help.
-
-=== WHY THIS IS INNOVATIVE ===
-Commercial tools like Spotfire cost $3,000-5,000/year and only show WHAT HAPPENED (descriptive).
-Our solution predicts WHAT WILL HAPPEN with uncertainty ranges (predictive + probabilistic).
-Plus, I (the AI assistant) can help anyone adapt it to new problems without coding.
-
-=== YOUR ML EXPERTISE ===
-1. MODEL SELECTION: Random Forest, XGBoost, LightGBM, Neural Networks, Linear Models, SVR
-2. FEATURE ENGINEERING: Domain-specific features, interactions, polynomial features
-3. UNCERTAINTY METHODS: Bootstrapping, Monte Carlo dropout, Bayesian approaches, quantile regression
-4. DATA PREPROCESSING: Scaling, encoding, outlier handling, missing value strategies
-5. PROBLEM TYPES: Regression, classification, time series, anomaly detection
-6. INDUSTRIES: Energy, oil & gas, finance, healthcare, manufacturing, retail
-
-=== LOCAL INSTALLATION INSTRUCTIONS ===
-If someone asks how to run this on their own laptop/machine:
-
-1. REQUIREMENTS:
-   - Python 3.8 or higher
-   - pip (Python package manager)
-
-2. DOWNLOAD THE PROJECT:
-   - Download the recipe zip file from Replit (or clone the GitHub repo)
-   - Extract to a folder on your computer
-
-3. INSTALL DEPENDENCIES:
-   Open terminal/command prompt in the project folder and run:
-   ```
-   pip install streamlit pandas numpy scikit-learn matplotlib seaborn plotly openai
-   ```
-
-4. SET UP OPENAI API KEY (for AI Assistant only):
-   - Get an API key from https://platform.openai.com/api-keys
-   - Set environment variable:
-     * Windows: set OPENAI_API_KEY=your-key-here
-     * Mac/Linux: export OPENAI_API_KEY=your-key-here
-   - Note: The ML workflow (Steps 1-7) works WITHOUT an API key. Only Step 9 (AI Assistant) needs it.
-
-5. RUN THE APP:
-   ```
-   streamlit run app.py
-   ```
-   This opens the app in your browser at http://localhost:8501
-
-6. UPLOAD DATA:
-   - Use the same training/test CSV files
-   - Follow Steps 1-7 to generate predictions
-
-TROUBLESHOOTING:
-- "Module not found" → Run pip install for the missing package
-- "streamlit not recognized" → Add Python Scripts folder to PATH, or use: python -m streamlit run app.py
-- App won't start → Check you're in the right folder containing app.py
-
-=== HOW TO RESPOND ===
-- If someone asks "what does Step X do?" - explain it clearly with the hackathon context
-- If someone asks "how do I use this?" - walk them through step by step
-- If someone asks about ML concepts - explain thoroughly
-- If someone wants to adapt the pipeline - suggest specific changes
-- If someone asks about local installation - give the step-by-step instructions above
-- Use bullet points for clarity
-- Reference the current data state when relevant
-
-Be friendly, concise, and helpful. You're here to make sure everyone on the team understands the workflow and can execute it confidently."""
-
-    for message in st.session_state.chat_messages:
+    for message in st.session_state.chat_history:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
     
-    if prompt := st.chat_input("Ask me about ML, features, models, or how to adapt this pipeline..."):
-        st.session_state.chat_messages.append({"role": "user", "content": prompt})
+    if prompt := st.chat_input("Ask about ML, the hackathon, or get help..."):
+        st.session_state.chat_history.append({"role": "user", "content": prompt})
+        
         with st.chat_message("user"):
             st.markdown(prompt)
         
@@ -920,68 +624,37 @@ Be friendly, concise, and helpful. You're here to make sure everyone on the team
                 try:
                     client = get_openai_client()
                     
-                    messages = [{"role": "system", "content": get_system_prompt()}]
-                    for msg in st.session_state.chat_messages[-10:]:
-                        messages.append({"role": msg["role"], "content": msg["content"]})
-                    
+                    system_prompt = """You are an expert ML assistant for the Energy AI Hackathon 2026, built by Team Brain Oil.
+
+The 2026 hackathon problem is:
+- Predict 3-year cumulative oil production (BBL) for 12 preproduction wells
+- Training data: 71 wells with petrophysical well logs (multiple depth measurements per well)
+- Features: porosity (phi), permeability (perm), gamma ray (GR), acoustic impedance (AI), facies, etc.
+- Must aggregate depth measurements per well (mean, std, min, max)
+- Output: Point estimate + 100 realizations (R1-R100) for uncertainty
+
+Key techniques being used:
+- MICE imputation for missing values (recommended by hackathon host)
+- Optuna for hyperparameter tuning
+- Random Forest regression
+- Residual bootstrapping for uncertainty quantification
+- Shapley values for feature importance (from workshop)
+
+Provide helpful, practical advice for winning the hackathon."""
+
                     response = client.chat.completions.create(
-                        model="gpt-4o",
-                        messages=messages,
-                        max_tokens=2000,
-                        temperature=0.7
+                        model="gpt-4o-mini",
+                        messages=[
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": prompt}
+                        ],
+                        max_tokens=1000
                     )
                     
                     assistant_response = response.choices[0].message.content
                     st.markdown(assistant_response)
-                    st.session_state.chat_messages.append({"role": "assistant", "content": assistant_response})
+                    st.session_state.chat_history.append({"role": "assistant", "content": assistant_response})
                     
                 except Exception as e:
                     error_msg = f"Error: {str(e)}"
                     st.error(error_msg)
-    
-    with st.expander("Quick Prompts - Click to Use"):
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.markdown("**Data & Features:**")
-            prompts1 = [
-                "What features should I engineer from my current data?",
-                "How can I handle missing values better?",
-                "What patterns do you see in my data?",
-                "How should I encode my categorical variables?"
-            ]
-            for p in prompts1:
-                if st.button(p, key=f"p1_{p[:20]}"):
-                    st.session_state.pending_prompt = p
-                    st.rerun()
-        
-        with col2:
-            st.markdown("**Models & Methods:**")
-            prompts2 = [
-                "What ML models would work better for this problem?",
-                "How can I improve my uncertainty quantification?",
-                "Should I use ensemble methods?",
-                "How do I adapt this for a classification problem?"
-            ]
-            for p in prompts2:
-                if st.button(p, key=f"p2_{p[:20]}"):
-                    st.session_state.pending_prompt = p
-                    st.rerun()
-    
-    if 'pending_prompt' in st.session_state:
-        prompt = st.session_state.pending_prompt
-        del st.session_state.pending_prompt
-        st.session_state.chat_messages.append({"role": "user", "content": prompt})
-        st.rerun()
-    
-    if st.button("Clear Chat History"):
-        st.session_state.chat_messages = []
-        st.rerun()
-    
-    st.markdown("---")
-    st.markdown("**Current Data Context:**")
-    st.code(get_data_context(), language="text")
-
-st.sidebar.markdown("---")
-st.sidebar.markdown("**Energy AI Hackathon 2026**")
-st.sidebar.markdown("Built for rapid ML workflow execution")
