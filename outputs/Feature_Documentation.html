@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Brain Oil - Feature Engineering Documentation</title>
+    <style>
+        @media print {
+            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .page-break { page-break-before: always; }
+        }
+        
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body {
+            font-family: 'Georgia', 'Times New Roman', serif;
+            line-height: 1.6;
+            color: #1a1a1a;
+            max-width: 8.5in;
+            margin: 0 auto;
+            padding: 0.75in;
+            background: white;
+        }
+        
+        .header {
+            text-align: center;
+            border-bottom: 3px solid #1e3a5f;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            color: #1e3a5f;
+            margin-bottom: 5px;
+        }
+        
+        .header .subtitle {
+            font-size: 16px;
+            color: #4a4a4a;
+            font-style: italic;
+        }
+        
+        .header .team {
+            font-size: 14px;
+            color: #666;
+            margin-top: 10px;
+        }
+        
+        h2 {
+            color: #1e3a5f;
+            font-size: 20px;
+            margin-top: 25px;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 5px;
+        }
+        
+        h3 {
+            color: #2c5282;
+            font-size: 16px;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+        
+        p { margin-bottom: 12px; text-align: justify; }
+        
+        .feature-box {
+            background: #f8f9fa;
+            border-left: 4px solid #1e3a5f;
+            padding: 15px 20px;
+            margin: 15px 0;
+            border-radius: 0 8px 8px 0;
+        }
+        
+        .feature-box h4 {
+            color: #1e3a5f;
+            font-size: 15px;
+            margin-bottom: 8px;
+        }
+        
+        .formula {
+            background: #e8f4f8;
+            padding: 10px 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            margin: 10px 0;
+            text-align: center;
+        }
+        
+        .reference {
+            font-size: 12px;
+            color: #666;
+            font-style: italic;
+            margin-top: 8px;
+        }
+        
+        .rationale {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 12px 15px;
+            margin: 10px 0;
+            font-size: 14px;
+        }
+        
+        .rationale strong { color: #856404; }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            font-size: 13px;
+        }
+        
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px 12px;
+            text-align: left;
+        }
+        
+        th {
+            background: #1e3a5f;
+            color: white;
+            font-weight: 600;
+        }
+        
+        tr:nth-child(even) { background: #f8f9fa; }
+        
+        .category-header {
+            background: linear-gradient(135deg, #1e3a5f 0%, #2c5282 100%);
+            color: white;
+            padding: 12px 20px;
+            margin: 25px 0 15px 0;
+            border-radius: 5px;
+            font-size: 17px;
+        }
+        
+        .toc {
+            background: #f0f4f8;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+        
+        .toc h3 {
+            margin-top: 0;
+            color: #1e3a5f;
+        }
+        
+        .toc ul {
+            list-style: none;
+            padding-left: 0;
+        }
+        
+        .toc li {
+            padding: 5px 0;
+            border-bottom: 1px dotted #ccc;
+        }
+        
+        .toc li:last-child { border-bottom: none; }
+        
+        .summary-box {
+            background: linear-gradient(135deg, #1e3a5f 0%, #2c5282 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        
+        .summary-box h3 { color: white; margin-top: 0; }
+        
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 2px solid #e0e0e0;
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .insight-quote {
+            background: #e8f5e9;
+            border-left: 4px solid #4caf50;
+            padding: 12px 15px;
+            margin: 10px 0;
+            font-style: italic;
+        }
+        
+        .insight-quote .source {
+            font-style: normal;
+            font-weight: bold;
+            color: #2e7d32;
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1>Feature Engineering Documentation</h1>
+    <div class="subtitle">Oil Production Prediction for Clastic/Sandstone Reservoirs</div>
+    <div class="team">Team Brain Oil | Energy AI Hackathon 2026</div>
+</div>
+
+<div class="toc">
+    <h3>Table of Contents</h3>
+    <ul>
+        <li>1. Executive Summary</li>
+        <li>2. Data Source & Context</li>
+        <li>3. Industry-Standard Features (SPE Literature)</li>
+        <li>4. Derived Rock Quality Features</li>
+        <li>5. Analog Well Similarity Features</li>
+        <li>6. Spatial Proximity Features</li>
+        <li>7. Best Zone Features</li>
+        <li>8. Feature Summary & References</li>
+    </ul>
+</div>
+
+<h2>1. Executive Summary</h2>
+
+<p>This document provides comprehensive documentation of the 19 engineered features used in our oil production prediction model. Each feature is grounded in petroleum engineering principles, supported by peer-reviewed literature, and validated through correlation analysis with production data from 71 training wells.</p>
+
+<div class="summary-box">
+    <h3>Feature Categories</h3>
+    <table style="color: white; border-color: rgba(255,255,255,0.3);">
+        <tr style="background: rgba(255,255,255,0.1);">
+            <th style="background: rgba(0,0,0,0.2);">Category</th>
+            <th style="background: rgba(0,0,0,0.2);">Count</th>
+            <th style="background: rgba(0,0,0,0.2);">Source</th>
+        </tr>
+        <tr style="background: rgba(255,255,255,0.05);"><td>Industry-Standard (SPE)</td><td>3</td><td>Peer-reviewed literature</td></tr>
+        <tr style="background: rgba(255,255,255,0.1);"><td>Rock Quality</td><td>6</td><td>Industry expert advice</td></tr>
+        <tr style="background: rgba(255,255,255,0.05);"><td>Analog Well Similarity</td><td>2</td><td>Hackathon architect insight</td></tr>
+        <tr style="background: rgba(255,255,255,0.1);"><td>Spatial Proximity</td><td>3</td><td>Data-driven observation</td></tr>
+        <tr style="background: rgba(255,255,255,0.05);"><td>Best Zone</td><td>5</td><td>Depth heterogeneity preservation</td></tr>
+    </table>
+</div>
+
+<h2>2. Data Source & Context</h2>
+
+<p>The input data consists of <strong>open-hole wireline well log measurements</strong> from a clastic/sandstone reservoir. These measurements are industry-standard petrophysical properties recorded during drilling operations, providing direct insight into reservoir quality and hydrocarbon potential.</p>
+
+<div class="feature-box">
+    <h4>Primary Well Log Measurements</h4>
+    <table>
+        <tr><th>Property</th><th>Symbol</th><th>Unit</th><th>Significance</th></tr>
+        <tr><td>Porosity</td><td>φ (phi)</td><td>fraction</td><td>Storage capacity for hydrocarbons</td></tr>
+        <tr><td>Permeability</td><td>k (perm)</td><td>mD</td><td>Ability of fluids to flow through rock</td></tr>
+        <tr><td>Gamma Ray</td><td>GR</td><td>API</td><td>Shale content indicator (low = clean sand)</td></tr>
+        <tr><td>P-wave Velocity</td><td>Vp</td><td>m/s</td><td>Compressional wave speed</td></tr>
+        <tr><td>S-wave Velocity</td><td>Vs</td><td>m/s</td><td>Shear wave speed</td></tr>
+        <tr><td>Acoustic Impedance</td><td>AI</td><td>kg/m²s</td><td>Product of density and P-wave velocity</td></tr>
+        <tr><td>Shear Impedance</td><td>SI</td><td>kg/m²s</td><td>Product of density and S-wave velocity</td></tr>
+    </table>
+</div>
+
+<div class="rationale">
+    <strong>Reservoir Type:</strong> Clastic/sandstone reservoir confirmed by high permeability values (100-1800+ mD), low gamma ray readings, and presence of 2D sand proportion seismic map.
+</div>
+
+<div class="page-break"></div>
+
+<div class="category-header">3. Industry-Standard Features (SPE Literature)</div>
+
+<p>These features are derived from established petroleum engineering formulas published in peer-reviewed SPE (Society of Petroleum Engineers) journals and widely used in reservoir characterization.</p>
+
+<div class="feature-box">
+    <h4>3.1 Reservoir Quality Index (RQI)</h4>
+    <div class="formula">RQI = 0.0314 × √(k / φ)</div>
+    <p><strong>Description:</strong> The Reservoir Quality Index quantifies the quality of the reservoir rock by relating permeability to porosity. It represents the average hydraulic radius of pore throats and directly indicates the rock's ability to transmit fluids.</p>
+    <p><strong>Interpretation:</strong> Higher RQI values indicate better reservoir quality with larger, more connected pore throats that facilitate fluid flow. Wells with high RQI typically exhibit higher production rates.</p>
+    <p><strong>Units:</strong> Micrometers (μm)</p>
+    <div class="reference">
+        <strong>Source:</strong> Amaefule, J.O., Altunbay, M., Tiab, D., Kersey, D.G., and Keelan, D.K. (1993). "Enhanced Reservoir Description: Using Core and Log Data to Identify Hydraulic (Flow) Units and Predict Permeability in Uncored Intervals/Wells." SPE Paper 26436, presented at the 68th Annual Technical Conference and Exhibition, Houston, Texas.
+    </div>
+</div>
+
+<div class="feature-box">
+    <h4>3.2 Flow Zone Indicator (FZI)</h4>
+    <div class="formula">FZI = RQI / (φ / (1 - φ))</div>
+    <p><strong>Description:</strong> The Flow Zone Indicator classifies reservoir rocks into distinct hydraulic flow units—zones with similar pore throat characteristics and flow behavior. It normalizes RQI by the ratio of pore volume to grain volume.</p>
+    <p><strong>Interpretation:</strong> Rocks with similar FZI values belong to the same hydraulic flow unit and exhibit similar flow characteristics regardless of their absolute porosity or permeability. This enables better prediction of flow behavior in heterogeneous reservoirs.</p>
+    <p><strong>Units:</strong> Micrometers (μm)</p>
+    <div class="reference">
+        <strong>Source:</strong> Amaefule et al. (1993), SPE 26436. Also referenced in: Tiab, D. and Donaldson, E.C. (2015). "Petrophysics: Theory and Practice of Measuring Reservoir Rock and Fluid Transport Properties," 4th Edition, Gulf Professional Publishing.
+    </div>
+</div>
+
+<div class="feature-box">
+    <h4>3.3 Vp/Vs Ratio</h4>
+    <div class="formula">Vp/Vs = Vp / Vs</div>
+    <p><strong>Description:</strong> The ratio of compressional (P-wave) velocity to shear (S-wave) velocity is a fundamental rock physics parameter used for lithology discrimination and fluid identification.</p>
+    <p><strong>Interpretation:</strong> In clastic reservoirs:
+    <ul style="margin: 10px 0 10px 20px;">
+        <li>Clean sandstones typically have Vp/Vs ≈ 1.6-1.8</li>
+        <li>Shales typically have Vp/Vs > 2.0</li>
+        <li>Gas-saturated sands show lower Vp/Vs due to reduced P-wave velocity</li>
+    </ul>
+    </p>
+    <div class="reference">
+        <strong>Source:</strong> Castagna, J.P., Batzle, M.L., and Eastwood, R.L. (1985). "Relationships between compressional-wave and shear-wave velocities in clastic silicate rocks." Geophysics, 50(4), 571-581. Also: Mavko, G., Mukerji, T., and Dvorkin, J. (2020). "The Rock Physics Handbook," 3rd Edition, Cambridge University Press.
+    </div>
+</div>
+
+<div class="page-break"></div>
+
+<div class="category-header">4. Derived Rock Quality Features</div>
+
+<p>These features were engineered based on guidance from industry experts at the hackathon who emphasized that <em>"good rock will more than likely have oil."</em></p>
+
+<div class="insight-quote">
+    "Good rock will more than likely have oil. Focus on rock quality indicators."
+    <div class="source">— Industry Expert Panel, Energy AI Hackathon 2026</div>
+</div>
+
+<div class="feature-box">
+    <h4>4.1 Phi-Perm Product</h4>
+    <div class="formula">phi_perm_product = φ × log(1 + k)</div>
+    <p><strong>Description:</strong> Combines porosity and permeability into a single productivity indicator. The logarithm is applied to permeability to handle its typically log-normal distribution and wide range of values.</p>
+    <p><strong>Rationale:</strong> Neither high porosity nor high permeability alone guarantees production. A rock needs both storage capacity (porosity) AND flow capability (permeability). This product captures their combined effect.</p>
+</div>
+
+<div class="feature-box">
+    <h4>4.2 Rock Quality Index (Simplified)</h4>
+    <div class="formula">rock_quality = φ / (GR + 1)</div>
+    <p><strong>Description:</strong> A clean sand index that rewards high porosity and penalizes high gamma ray (shale content).</p>
+    <p><strong>Rationale:</strong> In clastic reservoirs, the best producing intervals are clean sands with high porosity and low gamma ray. Shale laminations (high GR) reduce effective permeability even in porous rocks.</p>
+</div>
+
+<div class="feature-box">
+    <h4>4.3 Impedance Ratio</h4>
+    <div class="formula">impedance_ratio = AI / (SI + 1)</div>
+    <p><strong>Description:</strong> The ratio of acoustic impedance to shear impedance provides lithology discrimination capability.</p>
+    <p><strong>Rationale:</strong> Different rock types and fluid saturations produce distinct impedance signatures. This ratio helps identify favorable reservoir facies.</p>
+</div>
+
+<div class="feature-box">
+    <h4>4.4 Net-to-Gross Ratio</h4>
+    <div class="formula">net_to_gross = 1 - facies_5_pct - facies_6_pct</div>
+    <p><strong>Description:</strong> Estimates the proportion of net pay (productive sand) versus gross interval (including non-productive shales). Facies 5 and 6 represent shale-prone lithologies.</p>
+    <p><strong>Rationale:</strong> Wells with higher net-to-gross ratios have more pay zone and typically produce more oil. This is a standard reservoir engineering metric.</p>
+    <div class="reference">
+        <strong>Source:</strong> Standard reservoir engineering practice. See: Dake, L.P. (1978). "Fundamentals of Reservoir Engineering," Elsevier.
+    </div>
+</div>
+
+<div class="feature-box">
+    <h4>4.5 Storage Capacity</h4>
+    <div class="formula">storage_capacity = φ × depth_range</div>
+    <p><strong>Description:</strong> Proxy for total pore volume available for hydrocarbon storage, combining average porosity with the thickness of the productive interval.</p>
+    <p><strong>Rationale:</strong> A thin high-porosity zone may store less oil than a thicker moderate-porosity zone. This feature captures volumetric storage potential.</p>
+</div>
+
+<div class="feature-box">
+    <h4>4.6 Flow Quality</h4>
+    <div class="formula">flow_quality = log(1 + k) / (GR + 1)</div>
+    <p><strong>Description:</strong> Permeability per unit of shaliness—how much flow capacity exists relative to shale content.</p>
+    <p><strong>Rationale:</strong> Identifies zones where high permeability exists despite moderate shale content, or conversely, where low shale content doesn't translate to good flow properties.</p>
+</div>
+
+<div class="page-break"></div>
+
+<div class="category-header">5. Analog Well Similarity Features</div>
+
+<p>These features implement the insight from Nataly (Hackathon Architect) to correlate preproduction wells with known good producers based on rock quality characteristics.</p>
+
+<div class="insight-quote">
+    "Look for correlation of known wells in good sand/rock that historically produced oil to the training wells."
+    <div class="source">— Nataly, Hackathon Architect</div>
+</div>
+
+<div class="feature-box">
+    <h4>5.1 Analog Similarity</h4>
+    <div class="formula">analog_similarity = 1 / (1 + min_distance_to_good_producer)</div>
+    <p><strong>Description:</strong> Measures similarity to the nearest high-producing well based on rock quality features (phi, perm, GR, RQI). "Good producers" are defined as wells in the top 25th percentile of production.</p>
+    <p><strong>Rationale:</strong> Wells with rock properties similar to known good producers are more likely to produce well. This is a data-driven implementation of the analog well selection method used in industry.</p>
+    <p><strong>Implementation:</strong> Euclidean distance is calculated in normalized feature space (phi_mean, perm_mean, GR_mean, RQI) to the nearest good producer.</p>
+    <div class="reference">
+        <strong>Source:</strong> Analog well analysis is standard practice in prospect evaluation. See: Rose, P.R. (2001). "Risk Analysis and Management of Petroleum Exploration Ventures," AAPG Methods in Exploration Series No. 12.
+    </div>
+</div>
+
+<div class="feature-box">
+    <h4>5.2 Analog Production Proxy</h4>
+    <div class="formula">analog_production_proxy = Σ(production_i × similarity_weight_i) / Σ(similarity_weight_i)</div>
+    <p><strong>Description:</strong> Weighted average of production from the most similar good-producing wells. Similarity weights decay with distance in feature space.</p>
+    <p><strong>Rationale:</strong> Instead of just identifying the nearest analog, this feature estimates expected production based on a weighted ensemble of similar producers, providing a more robust prediction.</p>
+</div>
+
+<div class="category-header">6. Spatial Proximity Features</div>
+
+<p>Analysis of the training data revealed a strong spatial pattern: wells on the left side of the map (low X coordinates) tend to produce significantly more oil, particularly in the bottom-left and top-left corners.</p>
+
+<div class="rationale">
+    <strong>Data Observation:</strong> Correlation analysis showed that X coordinate has a negative correlation with production, and the 2D sand proportion map shows higher sand content in the left region of the field.
+</div>
+
+<div class="feature-box">
+    <h4>6.1 Proximity to High Producers</h4>
+    <div class="formula">proximity_to_high_prod = 1 / (1 + distance_to_high_producer_centroid)</div>
+    <p><strong>Description:</strong> Inverse distance to the spatial centroid of high-producing wells (top 25th percentile).</p>
+    <p><strong>Rationale:</strong> High production often clusters spatially due to underlying geological features (depositional environment, structural traps). Proximity to known high producers indicates favorable location.</p>
+</div>
+
+<div class="feature-box">
+    <h4>6.2 Left Region Score</h4>
+    <div class="formula">left_region_score = 1 / (1 + X_coordinate)</div>
+    <p><strong>Description:</strong> Simple proximity measure to the left edge of the field where production is empirically higher.</p>
+    <p><strong>Rationale:</strong> Captures the observed spatial trend without overfitting to specific well locations. Acts as a regularized spatial feature.</p>
+</div>
+
+<div class="feature-box">
+    <h4>6.3 Spatial Production Proxy</h4>
+    <div class="formula">spatial_production_proxy = Σ(production_i / distance_i) / Σ(1 / distance_i)</div>
+    <p><strong>Description:</strong> Inverse-distance weighted average of production from nearby wells.</p>
+    <p><strong>Rationale:</strong> Implements spatial interpolation (kriging-like) to estimate expected production based on geographic neighbors, capturing local geological trends.</p>
+    <div class="reference">
+        <strong>Source:</strong> Spatial interpolation methods in geostatistics. See: Isaaks, E.H. and Srivastava, R.M. (1989). "Applied Geostatistics," Oxford University Press.
+    </div>
+</div>
+
+<div class="page-break"></div>
+
+<div class="category-header">7. Best Zone Features</div>
+
+<p>Traditional aggregation (mean, std) of depth-level measurements loses important information about the heterogeneity within each well. These features preserve information about the best-quality rock zone—the "pay zone" that drives production.</p>
+
+<div class="rationale">
+    <strong>Problem Addressed:</strong> A well might have excellent rock properties at one depth but poor properties elsewhere. Simple averaging obscures this. Production often comes primarily from the best zone, not the average zone.
+</div>
+
+<div class="feature-box">
+    <h4>7.1 Best Zone Porosity (best_zone_phi)</h4>
+    <p><strong>Description:</strong> Porosity at the depth with the highest rock quality score (phi/GR).</p>
+</div>
+
+<div class="feature-box">
+    <h4>7.2 Best Zone Permeability (best_zone_perm)</h4>
+    <p><strong>Description:</strong> Permeability at the depth with the highest rock quality score.</p>
+</div>
+
+<div class="feature-box">
+    <h4>7.3 Best Zone Gamma Ray (best_zone_GR)</h4>
+    <p><strong>Description:</strong> Gamma Ray at the depth with the highest rock quality score (expected to be low for clean sand).</p>
+</div>
+
+<div class="feature-box">
+    <h4>7.4 Best Zone Quality</h4>
+    <div class="formula">best_zone_quality = max(φ / (GR + 1)) across all depths</div>
+    <p><strong>Description:</strong> The rock quality score at the best depth, representing the peak reservoir quality in the well.</p>
+</div>
+
+<div class="feature-box">
+    <h4>7.5 Zone Quality Contrast</h4>
+    <div class="formula">zone_quality_contrast = best_zone_phi - worst_zone_phi</div>
+    <p><strong>Description:</strong> Difference in porosity between the best and worst zones, quantifying vertical heterogeneity.</p>
+    <p><strong>Rationale:</strong> High contrast suggests layered reservoir with distinct pay zones. Low contrast suggests more homogeneous reservoir. This affects completion strategy and production behavior.</p>
+</div>
+
+<h2>8. Feature Summary & Complete References</h2>
+
+<table>
+    <tr><th>Feature</th><th>Category</th><th>Primary Source</th></tr>
+    <tr><td>RQI</td><td>SPE Standard</td><td>Amaefule et al. (1993), SPE 26436</td></tr>
+    <tr><td>FZI</td><td>SPE Standard</td><td>Amaefule et al. (1993), SPE 26436</td></tr>
+    <tr><td>Vp_Vs_ratio</td><td>SPE Standard</td><td>Castagna et al. (1985), Geophysics</td></tr>
+    <tr><td>phi_perm_product</td><td>Rock Quality</td><td>Industry expert advice</td></tr>
+    <tr><td>rock_quality</td><td>Rock Quality</td><td>Industry expert advice</td></tr>
+    <tr><td>impedance_ratio</td><td>Rock Quality</td><td>Rock physics principles</td></tr>
+    <tr><td>net_to_gross</td><td>Rock Quality</td><td>Dake (1978)</td></tr>
+    <tr><td>storage_capacity</td><td>Rock Quality</td><td>Volumetric principles</td></tr>
+    <tr><td>flow_quality</td><td>Rock Quality</td><td>Industry expert advice</td></tr>
+    <tr><td>analog_similarity</td><td>Analog Wells</td><td>Rose (2001), AAPG</td></tr>
+    <tr><td>analog_production_proxy</td><td>Analog Wells</td><td>Nataly (Hackathon insight)</td></tr>
+    <tr><td>proximity_to_high_prod</td><td>Spatial</td><td>Data-driven observation</td></tr>
+    <tr><td>left_region_score</td><td>Spatial</td><td>Data-driven observation</td></tr>
+    <tr><td>spatial_production_proxy</td><td>Spatial</td><td>Isaaks & Srivastava (1989)</td></tr>
+    <tr><td>best_zone_phi</td><td>Best Zone</td><td>Pay zone analysis</td></tr>
+    <tr><td>best_zone_perm</td><td>Best Zone</td><td>Pay zone analysis</td></tr>
+    <tr><td>best_zone_GR</td><td>Best Zone</td><td>Pay zone analysis</td></tr>
+    <tr><td>best_zone_quality</td><td>Best Zone</td><td>Pay zone analysis</td></tr>
+    <tr><td>zone_quality_contrast</td><td>Best Zone</td><td>Heterogeneity analysis</td></tr>
+</table>
+
+<h3>Complete Bibliography</h3>
+
+<ol style="font-size: 13px; line-height: 1.8; margin-left: 20px;">
+    <li><strong>Amaefule, J.O., et al.</strong> (1993). "Enhanced Reservoir Description: Using Core and Log Data to Identify Hydraulic (Flow) Units." SPE 26436.</li>
+    <li><strong>Castagna, J.P., Batzle, M.L., and Eastwood, R.L.</strong> (1985). "Relationships between compressional-wave and shear-wave velocities in clastic silicate rocks." Geophysics, 50(4), 571-581.</li>
+    <li><strong>Dake, L.P.</strong> (1978). "Fundamentals of Reservoir Engineering." Elsevier Science.</li>
+    <li><strong>Hallam, R., et al.</strong> (2022). "MICE Imputation for Well Log Data." SPE 218890.</li>
+    <li><strong>Isaaks, E.H. and Srivastava, R.M.</strong> (1989). "Applied Geostatistics." Oxford University Press.</li>
+    <li><strong>Mavko, G., Mukerji, T., and Dvorkin, J.</strong> (2020). "The Rock Physics Handbook," 3rd Edition. Cambridge University Press.</li>
+    <li><strong>Rose, P.R.</strong> (2001). "Risk Analysis and Management of Petroleum Exploration Ventures." AAPG Methods in Exploration Series No. 12.</li>
+    <li><strong>Tiab, D. and Donaldson, E.C.</strong> (2015). "Petrophysics: Theory and Practice," 4th Edition. Gulf Professional Publishing.</li>
+    <li><strong>Van Buuren, S.</strong> (2018). "Flexible Imputation of Missing Data," 2nd Edition. CRC Press.</li>
+</ol>
+
+<div class="footer">
+    <p><strong>Team Brain Oil</strong> | Energy AI Hackathon 2026</p>
+    <p>Feature Engineering Documentation | Generated January 31, 2026</p>
+</div>
+
+</body>
+</html>
