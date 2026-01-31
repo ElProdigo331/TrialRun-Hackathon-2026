@@ -1,7 +1,7 @@
 # Energy AI Hackathon 2026 Presentation Outline
 
 ## SLIDE 1: Title
-**Energy Usage Prediction for Hydraulic Fracturing Operations**
+**Predicting 3-Year Cumulative Oil Production**
 
 Brain Oil
 
@@ -11,7 +11,7 @@ Team Members:
 - [Member 3] - [Affiliation]
 - [Member 4] - [Affiliation]
 
-Energy AI Hackathon 2026 | January 23-25, 2026
+Energy AI Hackathon 2026 | February 1, 2026
 
 ---
 
@@ -19,208 +19,249 @@ Energy AI Hackathon 2026 | January 23-25, 2026
 
 **The Challenge**
 
-Predict energy consumption during hydraulic fracturing ("fracking") operations for 50 test wells:
-- Grid electricity (kWh)
-- Diesel fuel (gallons)
-- Compressed Natural Gas - CNG (MMBTU)
+Predict 3-year cumulative oil production (BBL) for 12 preproduction wells (Well IDs 72-83) using:
+- Petrophysical well log data (multiple depth measurements per well)
+- Production history from 71 analog wells
+- 2D seismic sand proportion map
 
 **Plus: Quantify Uncertainty**
-- 100 probabilistic realizations per prediction
-- Enables risk-aware decision making
+- 100 probabilistic realizations (R1-R100) per prediction
+- Enables risk-aware investment decisions
 
 **Why This Matters**
-- Fuel logistics planning
-- Cost optimization
-- Environmental impact assessment
+- Well prioritization for development
+- Capital allocation optimization
+- Reserve estimation confidence intervals
 
 ---
 
 ## SLIDE 3: Data Overview
 
 **Training Data**
-- [X] wells with historical energy usage
-- Features: stages, clusters, stage times, fleet type, formation, temperature, etc.
+- 71 production wells with historical data
+- ~21 depth measurements per well (1,491 total rows)
+- 17 petrophysical features at each depth
 
-**Key Insight: Fleet Types Determine Fuel Usage**
+**Key Challenge: Multi-Row Data**
 
-| Fleet Type | Uses Grid | Uses Diesel | Uses CNG |
-|------------|-----------|-------------|----------|
-| Grid       | Yes       | No          | No       |
-| Diesel     | No        | Yes         | No       |
-| Turbine    | No        | No          | Yes      |
-| DGB        | No        | Yes         | Yes      |
+Each well has multiple depth measurements (Z = 19 to 39):
+```
+Well_ID | X | Y | Z | phi | perm | GR | AI | facies | ...
+   1    | 50| 30| 19| 0.15| 120  | 45 | 8.2|   2    |
+   1    | 50| 30| 20| 0.14| 115  | 48 | 8.1|   2    |
+   ...
+```
 
-This domain knowledge directly shaped our modeling approach.
+**Solution:** Aggregate to one row per well (mean, std, min, max of each feature)
 
 ---
 
-## SLIDE 4: Our Approach - Separate Models
+## SLIDE 4: Our Approach
 
-**Why Separate Models Per Fuel Type?**
+**Complete ML Pipeline:**
 
-Instead of one model predicting all fuels, we train specialized models:
+```
+1. Well Log Aggregation
+   └── Multi-row → One row per well
+   └── Statistics: mean, std, min, max
 
-1. **Grid Model** - Trained only on Grid-powered wells
-2. **Diesel Model** - Trained on Diesel + DGB wells
-3. **CNG Model** - Trained on Turbine + DGB wells
+2. Target Calculation
+   └── 3-year cumulative oil from production history
 
-**Benefits:**
-- No wasted predictions for unused fuel types
-- Each model specializes in its fuel's patterns
-- Better accuracy than single multi-output model
+3. Feature Engineering
+   └── Sand proportion from seismic map
+   └── Facies distribution percentages
+   └── Derived features (phi×log(perm), rock quality)
+
+4. MICE Imputation
+   └── Handle 7-10% missing values
+   └── Preserves feature correlations
+
+5. Random Forest + Optuna
+   └── Automated hyperparameter tuning
+
+6. Uncertainty: Residual Bootstrapping
+   └── 100 realizations per prediction
+```
 
 ---
 
 ## SLIDE 5: Feature Engineering
 
-**Domain-Informed Features**
+**Petrophysical Features (Aggregated per Well)**
 
-| Feature | Formula | Rationale |
-|---------|---------|-----------|
-| Time_Overrun | Actual - Estimated Time | Delays affect fuel consumption |
-| Total_Pumping_Time | Stages × Stage Time | Total operation duration |
-| Clusters_per_Stage | Clusters / Stages | Fracturing intensity |
+| Feature Type | Examples | Aggregation |
+|--------------|----------|-------------|
+| Porosity | phi | mean, std, min, max |
+| Permeability | perm | mean, std, min, max |
+| Acoustic | AI, SI, Vp, Vs | mean, std, min, max |
+| Lithology | GR, facies | mean, distribution |
+| Density | rho_b, rho_f, rho_m | mean, std |
+| Moduli | K, G (dry, sat) | mean, std |
 
-**Model Choice: Random Forest**
-- Handles mixed feature types
-- Robust to outliers
-- Provides feature importance
-- Proven in previous hackathons
+**Derived Features:**
+- `phi_perm_product` = phi × log(perm) - productivity indicator
+- `rock_quality` = phi / GR - reservoir quality index
+- `sand_proportion` - from 2D seismic map using X,Y coordinates
 
 ---
 
-## SLIDE 6: Uncertainty Quantification
+## SLIDE 6: MICE Imputation
+
+**Why MICE? (Recommended by Hackathon Host)**
+
+Missing data: 7-10% across petrophysical features
+
+| Simple Imputation | MICE |
+|-------------------|------|
+| Uses median/mean only | Uses ALL features to predict missing |
+| Ignores correlations | Preserves correlations |
+| Can distort relationships | Maintains data structure |
+
+**How MICE Works:**
+1. Initialize missing values with median
+2. For each feature with missing values:
+   - Fit regression using all OTHER features
+   - Predict and replace missing values
+3. Iterate until convergence
+
+**Result:** More realistic imputed values that respect petrophysical relationships
+
+---
+
+## SLIDE 7: Model Training
+
+**Random Forest with Optuna Auto-Tuning**
+
+Optuna searches parameter space:
+- `n_estimators`: 50-300
+- `max_depth`: 3-20
+- `min_samples_split`: 2-20
+
+**Cross-Validation Results:**
+- CV R²: [Value from training]
+- Number of features: ~70+ after aggregation
+
+**Top 10 Most Important Features:**
+1. [Feature 1]
+2. [Feature 2]
+3. [Feature 3]
+... (from model.feature_importances_)
+
+---
+
+## SLIDE 8: Uncertainty Quantification
 
 **Method: Residual Bootstrapping**
 
-1. Train model and compute residuals from cross-validation
-2. For each test prediction, sample 100 residuals with replacement
-3. Add sampled residuals to point estimate
+1. Train model and compute residuals: `r = y_actual - y_predicted`
+2. For each test prediction:
+   - Sample 100 residuals with replacement
+   - Add sampled residual to point estimate
+   - Ensure non-negative values
 
-**Result: 100 Realizations Per Prediction**
+**Result: 100 Realizations Per Well**
 
-[INSERT: Histogram showing uncertainty distribution for sample well]
+```
+Well_ID | Prediction_BBL | R1 | R2 | ... | R100
+   72   |   25,000,000   | .. | .. | ... | ..
+   73   |   38,000,000   | .. | .. | ... | ..
+```
 
-This provides operators with:
-- Point estimate (most likely value)
-- Uncertainty range (planning buffer)
-- Full distribution for risk analysis
-
----
-
-## SLIDE 7: Results - Model Performance
-
-**Cross-Validation R² Scores**
-
-| Model | CV R² | Interpretation |
-|-------|-------|----------------|
-| Grid  | [X.XX] | [Good/Moderate/Challenging] |
-| Diesel | [X.XX] | [Good/Moderate/Challenging] |
-| CNG | [X.XX] | [Good/Moderate/Challenging] |
-
-[INSERT: Bar chart of CV scores]
+This captures prediction uncertainty from model limitations.
 
 ---
 
-## SLIDE 8: Results - Feature Importance
+## SLIDE 9: Results
 
-**Top Predictive Features**
+**Predictions for Wells 72-83**
 
-[INSERT: Feature importance bar chart]
+| Well_ID | Prediction (BBL) | P10 | P50 | P90 |
+|---------|------------------|-----|-----|-----|
+| 72 | [Value] | [Value] | [Value] | [Value] |
+| 73 | [Value] | [Value] | [Value] | [Value] |
+| ... | ... | ... | ... | ... |
 
-**Key Findings:**
-- [Feature 1] most important for [fuel type]
-- [Feature 2] drives [insight]
-- [Domain interpretation of results]
+**Uncertainty Distribution:**
+[Box plot showing prediction spread for each well]
 
----
-
-## SLIDE 9: Solution Output
-
-**Submission Format**
-
-| Well | Fuel Type | Point Est. | R_1 ... R_100 |
-|------|-----------|------------|---------------|
-| Well_A | Grid | 45,230 | ... |
-| Well_B | Diesel | 12,450 | ... |
-| Well_C | DGB_Diesel | 8,200 | ... |
-| Well_C | DGB_CNG | 156 | ... |
-
-**Final Output:**
-- 63 rows (50 wells, DGB wells have 2 rows)
-- 100 uncertainty realizations each
-- Ready for automated scoring
+**Key Insights:**
+- Predictions align with training data distribution (8M - 74M BBL)
+- Higher uncertainty for wells in underrepresented regions
+- Spatial patterns consistent with sand proportion map
 
 ---
 
-## SLIDE 10: Innovation - Beyond Commercial Tools
+## SLIDE 10: Value Proposition
 
-**Why This Matters: Commercial Tools Can't Do This**
+**Why Our Solution?**
 
-> *"Commercial tools like Spotfire cost thousands per year and only show historical data. Our solution predicts future energy usage with uncertainty quantification - something even enterprise tools don't do. And our AI assistant means any engineer can adapt it to new problems without coding."*
+| Traditional Decline Curves | Our ML Approach |
+|---------------------------|-----------------|
+| Needs production history | Works with well logs only |
+| Point estimates | Uncertainty quantification |
+| Manual parameter selection | Automated optimization |
+| Single analog well | Learns from 71 wells |
 
-| Aspect | Commercial BI Tools (Spotfire, Tableau) | Our Solution |
-|--------|----------------------------------------|--------------|
-| **Approach** | Descriptive (what happened) | **Predictive** (what will happen) |
-| **Output** | Charts & dashboards | Point estimates + uncertainty ranges |
-| **Cost** | $3,000-5,000/year license | Free (Python/Streamlit) |
-| **Adaptability** | Fixed features | **AI assistant adapts to any dataset** |
-| **Skill Value** | Vendor lock-in | Portable Python/ML skills |
-| **Innovation** | Standard BI | **Novel ML + uncertainty quantification** |
-
-**The Key Differentiator:**
-- Spotfire tells you *"here's what your energy consumption was"*
-- Our tool tells you *"here's what it will be, and here's how confident we are"*
-
-That's the difference between a **reporting tool** and an **intelligence tool**.
+**Novel Data Analytics:**
+1. **MICE Imputation** - Recommended by host, preserves feature correlations
+2. **Well Log Aggregation** - Handles complex multi-row structure
+3. **Spatial Integration** - Incorporates 2D seismic sand map
+4. **Automated Tuning** - Optuna finds optimal model
 
 ---
 
-## SLIDE 11: Conclusions & Impact
+## SLIDE 11: Conclusion
 
-**What We Built**
-- Complete ML pipeline for energy prediction
-- Separate models respecting domain logic
-- Robust uncertainty quantification
-- **AI-powered assistant for adaptability**
+**Summary:**
+- Complete ML pipeline for oil production prediction
+- Handles multi-row well log data through aggregation
+- MICE imputation for missing values (host recommendation)
+- Optuna-tuned Random Forest model
+- 100 uncertainty realizations per prediction
 
-**Real-World Value**
-- **Cost Savings**: Avoid over-ordering fuel
-- **Reliability**: Don't run short during operations
-- **Planning**: Confidence intervals for logistics
-- **Accessibility**: Engineers can use it without coding
+**Files Submitted:**
+1. `BrainOil.ipynb` - Complete reproducible workflow
+2. `BrainOil.pptx` - This presentation
+3. `solution.csv` - Predictions for Wells 72-83
 
-**Future Improvements**
-- Ensemble methods (XGBoost, Neural Networks)
-- Spatial features if location data available
-- Time-series patterns if temporal data added
+**Team Brain Oil**
+Energy AI Hackathon 2026
 
 ---
 
-## BACKUP SLIDES
+## APPENDIX: Technical Details
 
-### Backup 1: Data Cleaning
+**Data Files:**
+- `Well_log_data_production_wells.csv` (1,491 rows, 71 wells)
+- `Well_log_data_preproduction_wells.csv` (252 rows, 12 wells)
+- `Production_history_production_wells.csv` (5,517 rows)
+- `2d_sand_proportion.npy` (200×200 spatial map)
 
-- Missing values: Median imputation (numeric), Mode (categorical)
-- [X]% of data required imputation
-- No rows dropped
+**Feature List (Post-Aggregation):**
+- 17 petrophysical features × 4 aggregations = 68 features
+- + Spatial (X, Y, depth_range)
+- + Facies distribution (6 facies types)
+- + Sand proportion
+- + Derived features (3)
+- Total: ~75-80 features
 
-### Backup 2: Hyperparameters
+**Compute Time:**
+- Data loading & aggregation: ~2 seconds
+- MICE imputation: ~5 seconds
+- Optuna tuning (30 trials): ~30 seconds
+- Total: < 1 minute
 
-| Parameter | Value |
-|-----------|-------|
-| n_estimators | 100 |
-| max_depth | 15 |
-| random_state | 42 |
+---
 
-### Backup 3: Why Not Other Models?
+## APPENDIX: Solution Format
 
-- **Linear Regression**: Too simple, misses non-linear relationships
-- **XGBoost**: Tried, similar performance, RF more interpretable
-- **Neural Networks**: Overkill for dataset size, harder to explain
+**Column Definitions:**
 
-### Backup 4: Residual Analysis
+| Column | Description |
+|--------|-------------|
+| Well_ID | Well identifier (72-83) |
+| Prediction_BBL | Point estimate (3-year cumulative oil) |
+| R1 - R100 | 100 uncertainty realizations |
 
-[INSERT: Residual plot if available]
-
-Residuals approximately normal, justifying bootstrapping approach.
+**All values in BBL (barrels of oil)**

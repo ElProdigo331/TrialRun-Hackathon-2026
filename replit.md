@@ -1,103 +1,137 @@
-# Energy AI Hackathon 2026 Workflow Application
+# Energy AI Hackathon 2026 - Oil Production Prediction
 
-## REMINDER FOR NEXT SESSION (Jan 24, 2026)
-- [ ] Check project visibility settings (Public vs Private) - ensure it's PRIVATE
-- [ ] Check if anyone besides the owner has accessed/logged into this project
-- [ ] Do a FULL DRY RUN: Start fresh project, use recipe zip, follow strategy guide
-- [ ] Time each phase to know how long the real hackathon will take
+## Team: Brain Oil
+**Deadline:** February 1st, 2026 at 12:00 noon
+**Submission Files:** BrainOil.ipynb, BrainOil.pptx, solution.csv
 
 ---
 
-## Overview
-This is a comprehensive Streamlit-based machine learning workflow application designed for the Energy AI Hackathon. It provides an end-to-end pipeline for predicting energy usage (Grid kWh, Diesel gal, CNG MMBTU) during hydraulic fracturing operations.
+## Problem Statement (2026)
+Predict **3-year cumulative oil production (BBL)** for **12 preproduction wells** (Well IDs 72-83).
 
-**NEW: AI-Powered ML Assistant** - Integrated chat interface that can help adapt the pipeline to ANY dataset, industry, or problem type. Uses natural language to suggest features, recommend models, and troubleshoot issues.
+### Key Differences from 2025:
+| 2025 | 2026 |
+|------|------|
+| Energy consumption (Grid, Diesel, CNG) | Oil production (BBL) |
+| Frac fleet operations | Petrophysical well logs |
+| 50 wells, single row each | 12 wells, multi-row depth data |
+| Multiple targets | Single target |
 
-## Project Goal
-Predict energy consumption for 50 wells with:
-- Point estimates for each target (Grid, Diesel, CNG)
-- 100 uncertainty realizations per prediction (probabilistic forecasting)
+---
+
+## Data Structure
+
+### Files:
+| File | Rows | Description |
+|------|------|-------------|
+| Well_log_data_production_wells.csv | 1,491 | Training features (71 wells × ~21 depths) |
+| Well_log_data_preproduction_wells.csv | 252 | Test features (12 wells × ~21 depths) |
+| Production_history_production_wells.csv | 5,517 | Target source (monthly cumulative) |
+| 2d_sand_proportion.npy | 200×200 | Spatial sand map |
+| solution.csv | 12 | Submission template |
+
+### Multi-Row Data Challenge:
+Each well has ~21 rows (depth measurements Z=19-39). Must aggregate to one row per well:
+- Mean, std, min, max of each numeric feature
+- Facies distribution percentages
+- Depth range
+
+---
+
+## Solution Format
+
+| Column | Description |
+|--------|-------------|
+| Well_ID | Well identifier (72-83) |
+| Prediction_BBL | Point estimate |
+| R1 - R100 | 100 uncertainty realizations |
+
+**Note:** Column names are `R1`, `R2`, ..., `R100` (NOT `Real_1`, etc.)
+
+---
+
+## ML Pipeline (7 Steps)
+
+1. **Data Loading & Aggregation** - Load 4 data files, aggregate multi-row to one per well
+2. **Data Cleaning (MICE)** - Handle 7-10% missing values with MICE imputation
+3. **Exploratory Data Analysis** - Visualize targets, features, correlations
+4. **Feature Engineering** - phi_perm_product, rock_quality, impedance_ratio
+5. **Model Training** - Random Forest with Optuna auto-tuning
+6. **Generate Solution** - Point estimates + 100 realizations via residual bootstrapping
+7. **AI Assistant** - Chat interface for ML guidance
+
+---
+
+## Key Techniques (Host Recommended)
+
+1. **MICE Imputation** - Multivariate Imputation by Chained Equations
+   - Preserves correlations between features
+   - Better than simple median imputation for 7-10% missing data
+
+2. **Shapley Values** - Feature importance interpretation
+   - Available in EDA section
+
+3. **Correlation Analysis** - Identify top predictors
+
+---
 
 ## Running the Application
 ```bash
 streamlit run app.py --server.port 5000
 ```
 
+---
+
 ## Project Structure
 ```
 /
-├── app.py                    # Main Streamlit application
+├── app.py                    # Main Streamlit application (2026 version)
 ├── data/                     # Data files
-│   ├── HackathonData2025.csv # Training data (1,082 wells)
-│   ├── testing.csv           # Test data (50 wells)
-│   └── solution.csv          # Reference solution format
+│   ├── Well_log_data_production_wells.csv
+│   ├── Well_log_data_preproduction_wells.csv
+│   ├── Production_history_production_wells.csv
+│   ├── 2d_sand_proportion.npy
+│   └── solution.csv
 ├── outputs/                  # Generated outputs
-│   └── solution.csv          # Final predictions with realizations
-├── attached_assets/          # Original uploaded files
-├── data2025/                 # Extracted 2025 hackathon data
-├── geostatspy/               # GeostatsPy library reference
-├── pythondemos/              # Python numerical demos reference
-├── geodatasets/              # Geo datasets reference
-├── resources/                # Additional resources
-└── .streamlit/config.toml    # Streamlit configuration
+├── notebooks/
+│   └── BrainOil.ipynb       # Submission notebook
+├── presentations/
+│   └── BrainOil.md          # Presentation outline
+└── hackathon2026_data/      # Original downloaded data
 ```
 
-## Application Features
+---
 
-### 9-Step Workflow:
-1. **Data Upload & Inspection** - Load training/test data, view statistics
-2. **Data Cleaning & Imputation** - Handle missing values
-3. **Exploratory Data Analysis** - Visualize distributions, correlations
-4. **Feature Engineering** - Create derived features
-5. **Model Training** - Train Random Forest models with cross-validation
-6. **Uncertainty Quantification** - Residual bootstrapping analysis
-7. **Generate Predictions** - Create solution file with 100 realizations
-8. **Quick Start Guide** - Instructions for 2026 hackathon
-9. **AI ML Assistant** - Chat interface for ML guidance and pipeline adaptation
+## Features Used
 
-## Modeling Strategy
+### Petrophysical (Aggregated):
+- **phi** - Porosity
+- **perm** - Permeability
+- **GR** - Gamma Ray
+- **AI, SI** - Acoustic/Shear Impedance
+- **Vp, Vs** - P-wave/S-wave velocity
+- **rho_b, rho_f, rho_m** - Bulk/Fluid/Matrix density
+- **K0, Kdry, Kf, Ksat** - Bulk modulus variants
+- **G0, Gdry, Gsat** - Shear modulus variants
+- **facies** - Rock type (1-6, encoded as distribution)
 
-### Fuel Type Segmentation:
-| Fleet Type | Predicts | Reasoning |
-|------------|----------|-----------|
-| Grid | Grid (kWh) only | Electric-powered wells |
-| Diesel | Diesel (gal) only | Diesel generator-powered wells |
-| Turbine | CNG (MMBTU) only | Natural gas turbine-powered wells |
-| DGB | BOTH Diesel AND CNG | Hybrid wells use both fuels |
+### Derived:
+- **sand_proportion** - From 2D seismic map
+- **phi_perm_product** - phi × log(perm)
+- **rock_quality** - phi / GR
+- **impedance_ratio** - AI / SI
+- **depth_range** - Z_max - Z_min
 
-### Key Features:
-- Number of Stages, Number of Clusters
-- Estimated/Actual Average Stage Time
-- Ambient Temperature
-- Frac Fleet, Fleet Type, Target Formation, Field Area
-- Engineered: Time_Overrun, Total_Pumping_Time, Clusters_per_Stage
+---
 
-### Uncertainty Method:
-Residual bootstrapping - sample 100 residuals with replacement and add to point estimates.
+## Target Details
 
-## Value Proposition - Key Talking Points
+- **Target:** 3-year cumulative oil production
+- **Range:** 8,242,955 to 74,021,408 BBL
+- **Mean:** 33,378,139 BBL
+- **Std:** 14,148,917 BBL
 
-**Why Our Solution Beats Commercial Tools (Spotfire, Tableau, Power BI):**
-
-> *"Commercial tools like Spotfire cost thousands per year and only show historical data. Our solution predicts future energy usage with uncertainty quantification - something even enterprise tools don't do. And our AI assistant means any engineer can adapt it to new problems without coding."*
-
-| Commercial BI Tools | Our Solution |
-|---------------------|--------------|
-| Descriptive (what happened) | **Predictive** (what will happen) |
-| Charts & dashboards | Point estimates + uncertainty ranges |
-| $3,000-5,000/year license | Free (Python/Streamlit) |
-| Vendor lock-in | Portable Python/ML skills |
-
-**The Key Differentiator:**
-- Spotfire = **Reporting tool** ("here's what your energy consumption was")
-- Our solution = **Intelligence tool** ("here's what it will be, and how confident we are")
-
-## For 2026 Hackathon Adaptation
-
-1. Upload new training/test data files
-2. Review any new columns or changed formats
-3. Run through Steps 1-7
-4. Download solution.csv
+---
 
 ## Dependencies
 - streamlit
@@ -107,16 +141,5 @@ Residual bootstrapping - sample 100 residuals with replacement and add to point 
 - matplotlib
 - seaborn
 - plotly
-
-## Solution File Format
-| Column | Description |
-|--------|-------------|
-| Masked Well Name | Well identifier |
-| Fuel Type | Grid, Diesel, or CNG |
-| Fuel Value | Point estimate |
-| Real_1 through Real_100 | 100 uncertainty realizations |
-
-## Team Information
-- **Team Name:** Brain Oil
-- **Submission Files:** BrainOil.ipynb, BrainOil.pptx, solution.csv
-- **Deadline:** February 1st, 2026 at 12:00 noon
+- optuna
+- openai (for AI assistant)
