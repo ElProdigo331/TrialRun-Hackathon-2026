@@ -97,7 +97,7 @@ From 4 industry heads at the hackathon:
 |--------|---------|---------|
 | **Model Type** | Linear Regression, Ridge, Random Forest | Try simple first (Dr. Pyrcz) |
 | **Normalize Features** | Checkbox (default: ON) | StandardScaler |
-| **Sand Map Handling** | Include, Exclude, Smooth (3x3) | Handle noisy sand map (Dinghan Wang) |
+| **Sand Map Handling** | Include, Exclude, Smooth (3x3), Smooth (5x5) | Handle noisy sand map (Dinghan Wang) |
 | **Experiment Name** | Auto-generated | Labels output files for comparison |
 
 **Experiment outputs saved to:** `outputs/solution_{experiment_name}.csv`

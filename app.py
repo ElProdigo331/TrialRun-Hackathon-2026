@@ -791,7 +791,7 @@ elif page == "5. Model Training":
         with col3:
             sand_map_option = st.selectbox(
                 "Sand Map Handling",
-                ["Include", "Exclude", "Smooth (3x3)"],
+                ["Include", "Exclude", "Smooth (3x3)", "Smooth (5x5)"],
                 help="Dinghan Wang: sand map has deliberate noise"
             )
         
@@ -831,10 +831,11 @@ elif page == "5. Model Training":
         
         if sand_map_option == "Exclude":
             exclude_cols.append('sand_proportion')
-        elif sand_map_option == "Smooth (3x3)":
+        elif sand_map_option == "Smooth (3x3)" or sand_map_option == "Smooth (5x5)":
+            kernel_size = 5 if sand_map_option == "Smooth (5x5)" else 3
             sand_map = st.session_state.sand_map
             from scipy.ndimage import uniform_filter
-            smoothed_map = uniform_filter(sand_map, size=3)
+            smoothed_map = uniform_filter(sand_map, size=kernel_size)
             st.session_state.sand_map = smoothed_map
             all_x = pd.concat([train_df['X'], test_df['X']])
             all_y = pd.concat([train_df['Y'], test_df['Y']])
