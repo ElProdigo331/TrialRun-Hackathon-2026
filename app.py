@@ -484,81 +484,156 @@ elif page == "5. Model Training":
         st.warning("Please load data in Step 1 first.")
     else:
         train_df = st.session_state.train_df.copy()
+        test_df = st.session_state.test_df.copy()
+        
+        st.subheader("Experiment Configuration (Dr. Pyrcz's Advice)")
+        
+        st.info("**Dr. Pyrcz's Recommendations:** Normalize everything, try simplest things first (Linear), look at highs/lows.")
+        
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            model_type = st.selectbox(
+                "Model Type",
+                ["Random Forest", "Linear Regression", "Ridge Regression"],
+                help="Try Linear first as baseline (Dr. Pyrcz's advice)"
+            )
+        
+        with col2:
+            normalize_features = st.checkbox(
+                "Normalize Features (StandardScaler)",
+                value=True,
+                help="Recommended by Dr. Pyrcz - equalizes feature scales"
+            )
+        
+        with col3:
+            sand_map_option = st.selectbox(
+                "Sand Map Handling",
+                ["Include", "Exclude", "Smooth (3x3)"],
+                help="Dinghan Wang: sand map has deliberate noise"
+            )
+        
+        st.divider()
         
         st.subheader("Model Configuration")
         
-        tuning_mode = st.radio(
-            "Hyperparameter Tuning Mode:",
-            ["Manual", "Optuna (Auto-Tune)"],
-            help="Optuna automatically finds optimal hyperparameters using Bayesian optimization"
-        )
-        
-        col1, col2 = st.columns(2)
-        
-        if tuning_mode == "Manual":
-            with col1:
-                n_estimators = st.slider("Number of Trees", 50, 300, 100, 50)
-                max_depth = st.selectbox("Max Depth", [None, 5, 10, 15, 20], index=3)
-            with col2:
-                min_samples_split = st.slider("Min Samples Split", 2, 20, 5)
-                cv_folds = st.slider("Cross-Validation Folds", 3, 10, 5)
+        if model_type == "Random Forest":
+            tuning_mode = st.radio(
+                "Hyperparameter Tuning Mode:",
+                ["Manual", "Optuna (Auto-Tune)"],
+                help="Optuna automatically finds optimal hyperparameters using Bayesian optimization"
+            )
+            
+            col1, col2 = st.columns(2)
+            
+            if tuning_mode == "Manual":
+                with col1:
+                    n_estimators = st.slider("Number of Trees", 50, 300, 100, 50)
+                    max_depth = st.selectbox("Max Depth", [None, 5, 10, 15, 20], index=3)
+                with col2:
+                    min_samples_split = st.slider("Min Samples Split", 2, 20, 5)
+                    cv_folds = st.slider("Cross-Validation Folds", 3, 10, 5)
+            else:
+                with col1:
+                    n_trials = st.slider("Optuna Trials", 10, 100, 30, 10)
+                    cv_folds = st.slider("Cross-Validation Folds", 3, 10, 5)
+                with col2:
+                    st.info("Optuna will search:\n- n_estimators: 50-300\n- max_depth: 3-20\n- min_samples_split: 2-20")
         else:
-            with col1:
-                n_trials = st.slider("Optuna Trials", 10, 100, 30, 10)
-                cv_folds = st.slider("Cross-Validation Folds", 3, 10, 5)
-            with col2:
-                st.info("Optuna will search:\n- n_estimators: 50-300\n- max_depth: 3-20\n- min_samples_split: 2-20")
+            tuning_mode = "Manual"
+            cv_folds = st.slider("Cross-Validation Folds", 3, 10, 5)
+            if model_type == "Ridge Regression":
+                alpha = st.slider("Ridge Alpha (Regularization)", 0.01, 100.0, 1.0)
         
         exclude_cols = ['Well_ID', 'Target_3yr_Oil_BBL']
+        
+        if sand_map_option == "Exclude":
+            exclude_cols.append('sand_proportion')
+        elif sand_map_option == "Smooth (3x3)":
+            sand_map = st.session_state.sand_map
+            from scipy.ndimage import uniform_filter
+            smoothed_map = uniform_filter(sand_map, size=3)
+            st.session_state.sand_map = smoothed_map
+            all_x = pd.concat([train_df['X'], test_df['X']])
+            all_y = pd.concat([train_df['Y'], test_df['Y']])
+            x_min, x_max = all_x.min(), all_x.max()
+            y_min, y_max = all_y.min(), all_y.max()
+            train_df['sand_proportion'] = lookup_sand_proportion(train_df, smoothed_map, x_min, x_max, y_min, y_max)
+            test_df['sand_proportion'] = lookup_sand_proportion(test_df, smoothed_map, x_min, x_max, y_min, y_max)
+        
         feature_cols = [c for c in train_df.columns if c not in exclude_cols and train_df[c].dtype in ['float64', 'int64']]
         
         st.markdown(f"**Features available:** {len(feature_cols)}")
         
+        experiment_name = st.text_input("Experiment Name (for output file)", value=f"{model_type.replace(' ', '_')}_norm{normalize_features}_sand{sand_map_option}")
+        
         if st.button("Train Model", type="primary"):
+            from sklearn.preprocessing import StandardScaler
+            from sklearn.linear_model import LinearRegression, Ridge
+            from sklearn.model_selection import cross_val_predict
+            
             X = train_df[feature_cols].fillna(0)
             y = train_df['Target_3yr_Oil_BBL']
             
             st.session_state.feature_cols = feature_cols
             
-            if tuning_mode == "Optuna (Auto-Tune)":
-                import optuna
-                optuna.logging.set_verbosity(optuna.logging.WARNING)
-                
-                with st.spinner(f"Optuna tuning model ({n_trials} trials)..."):
-                    def objective(trial):
-                        params = {
-                            'n_estimators': trial.suggest_int('n_estimators', 50, 300),
-                            'max_depth': trial.suggest_int('max_depth', 3, 20),
-                            'min_samples_split': trial.suggest_int('min_samples_split', 2, 20),
-                            'random_state': 42,
-                            'n_jobs': -1
-                        }
-                        model = RandomForestRegressor(**params)
-                        scores = cross_val_score(model, X, y, cv=cv_folds, scoring='r2')
-                        return scores.mean()
-                    
-                    study = optuna.create_study(direction='maximize')
-                    study.optimize(objective, n_trials=n_trials, show_progress_bar=False)
-                    
-                    best_params = study.best_params
-                    best_params['random_state'] = 42
-                    best_params['n_jobs'] = -1
-                    
-                    st.success(f"Best params: n_estimators={best_params['n_estimators']}, max_depth={best_params['max_depth']}, min_samples_split={best_params['min_samples_split']}")
-                    
-                    model = RandomForestRegressor(**best_params)
-            else:
-                model = RandomForestRegressor(
-                    n_estimators=n_estimators,
-                    max_depth=max_depth,
-                    min_samples_split=min_samples_split,
-                    random_state=42,
-                    n_jobs=-1
-                )
+            scaler = None
+            if normalize_features:
+                scaler = StandardScaler()
+                X_scaled = pd.DataFrame(scaler.fit_transform(X), columns=X.columns, index=X.index)
+                X = X_scaled
+                st.success("Features normalized with StandardScaler")
             
-            with st.spinner("Training final model..."):
-                from sklearn.model_selection import cross_val_predict
-                
+            st.session_state.scaler = scaler
+            st.session_state.normalize_features = normalize_features
+            st.session_state.experiment_name = experiment_name
+            
+            if model_type == "Random Forest":
+                if tuning_mode == "Optuna (Auto-Tune)":
+                    import optuna
+                    optuna.logging.set_verbosity(optuna.logging.WARNING)
+                    
+                    with st.spinner(f"Optuna tuning model ({n_trials} trials)..."):
+                        def objective(trial):
+                            params = {
+                                'n_estimators': trial.suggest_int('n_estimators', 50, 300),
+                                'max_depth': trial.suggest_int('max_depth', 3, 20),
+                                'min_samples_split': trial.suggest_int('min_samples_split', 2, 20),
+                                'random_state': 42,
+                                'n_jobs': -1
+                            }
+                            model = RandomForestRegressor(**params)
+                            scores = cross_val_score(model, X, y, cv=cv_folds, scoring='r2')
+                            return scores.mean()
+                        
+                        study = optuna.create_study(direction='maximize')
+                        study.optimize(objective, n_trials=n_trials, show_progress_bar=False)
+                        
+                        best_params = study.best_params
+                        best_params['random_state'] = 42
+                        best_params['n_jobs'] = -1
+                        
+                        st.success(f"Best params: n_estimators={best_params['n_estimators']}, max_depth={best_params['max_depth']}, min_samples_split={best_params['min_samples_split']}")
+                        
+                        model = RandomForestRegressor(**best_params)
+                else:
+                    model = RandomForestRegressor(
+                        n_estimators=n_estimators,
+                        max_depth=max_depth,
+                        min_samples_split=min_samples_split,
+                        random_state=42,
+                        n_jobs=-1
+                    )
+            elif model_type == "Linear Regression":
+                model = LinearRegression()
+                st.info("Using Linear Regression (Dr. Pyrcz's baseline recommendation)")
+            else:
+                model = Ridge(alpha=alpha, random_state=42)
+                st.info(f"Using Ridge Regression with alpha={alpha}")
+            
+            st.session_state.model_type = model_type
+            
+            with st.spinner("Training model..."):
                 cv_scores = cross_val_score(model, X, y, cv=cv_folds, scoring='r2')
                 
                 y_pred_cv = cross_val_predict(model, X, y, cv=cv_folds)
@@ -571,23 +646,35 @@ elif page == "5. Model Training":
                 st.session_state.model = model
                 st.session_state.residuals = residuals.values
             
-            st.success("Model trained successfully!")
+            st.success(f"{model_type} trained successfully!")
             
             col1, col2, col3 = st.columns(3)
             col1.metric("CV R² Mean", f"{cv_scores.mean():.4f}")
             col2.metric("CV R² Std", f"{cv_scores.std():.4f}")
             col3.metric("Train R²", f"{r2_score(y, y_pred):.4f}")
             
-            st.subheader("Feature Importance")
-            importance_df = pd.DataFrame({
-                'Feature': feature_cols,
-                'Importance': model.feature_importances_
-            }).sort_values('Importance', ascending=False).head(20)
-            
-            fig = px.bar(importance_df, x='Importance', y='Feature', orientation='h',
-                        title="Top 20 Feature Importances")
-            fig.update_layout(yaxis={'categoryorder': 'total ascending'})
-            st.plotly_chart(fig, use_container_width=True)
+            if model_type == "Random Forest":
+                st.subheader("Feature Importance")
+                importance_df = pd.DataFrame({
+                    'Feature': feature_cols,
+                    'Importance': model.feature_importances_
+                }).sort_values('Importance', ascending=False).head(20)
+                
+                fig = px.bar(importance_df, x='Importance', y='Feature', orientation='h',
+                            title="Top 20 Feature Importances")
+                fig.update_layout(yaxis={'categoryorder': 'total ascending'})
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.subheader("Feature Coefficients (Linear Model)")
+                coef_df = pd.DataFrame({
+                    'Feature': feature_cols,
+                    'Coefficient': model.coef_
+                }).sort_values('Coefficient', key=abs, ascending=False).head(20)
+                
+                fig = px.bar(coef_df, x='Coefficient', y='Feature', orientation='h',
+                            title="Top 20 Feature Coefficients (Absolute)")
+                fig.update_layout(yaxis={'categoryorder': 'total ascending'})
+                st.plotly_chart(fig, use_container_width=True)
             
             st.subheader("Residual Analysis")
             col1, col2 = st.columns(2)
@@ -610,6 +697,12 @@ elif page == "6. Generate Solution":
         test_df = st.session_state.test_df
         residuals = st.session_state.residuals
         feature_cols = st.session_state.feature_cols
+        scaler = st.session_state.get('scaler', None)
+        normalize_features = st.session_state.get('normalize_features', False)
+        experiment_name = st.session_state.get('experiment_name', 'experiment')
+        model_type = st.session_state.get('model_type', 'Random Forest')
+        
+        st.info(f"**Current Experiment:** {experiment_name} | **Model:** {model_type} | **Normalized:** {normalize_features}")
         
         st.markdown("""
         **Solution Requirements:**
@@ -620,9 +713,19 @@ elif page == "6. Generate Solution":
         
         n_realizations = st.slider("Number of Realizations", 10, 100, 100)
         
+        col1, col2 = st.columns(2)
+        with col1:
+            save_as_main = st.checkbox("Save as main solution.csv", value=True, help="Overwrite the main submission file")
+        with col2:
+            save_experiment = st.checkbox("Also save as experiment file", value=True, help="Save with experiment name for comparison")
+        
         if st.button("Generate Predictions", type="primary"):
             test_df_sorted = test_df.sort_values('Well_ID').reset_index(drop=True)
             X_test = test_df_sorted[feature_cols].fillna(0)
+            
+            if normalize_features and scaler is not None:
+                X_test = pd.DataFrame(scaler.transform(X_test), columns=X_test.columns, index=X_test.index)
+                st.success("Test features normalized using training scaler")
             
             point_predictions = model.predict(X_test)
             
@@ -640,10 +743,19 @@ elif page == "6. Generate Solution":
                 solution[f'R{i+1}'] = realizations[:, i].round(0).astype(int)
             
             os.makedirs(OUTPUT_DIR, exist_ok=True)
-            solution.to_csv(f"{OUTPUT_DIR}/solution.csv", index=False)
-            solution.to_csv(f"{DATA_DIR}/solution.csv", index=False)
             
-            st.success("Solution generated and saved!")
+            files_saved = []
+            if save_as_main:
+                solution.to_csv(f"{OUTPUT_DIR}/solution.csv", index=False)
+                solution.to_csv(f"{DATA_DIR}/solution.csv", index=False)
+                files_saved.append("solution.csv")
+            
+            if save_experiment:
+                exp_filename = f"solution_{experiment_name}.csv"
+                solution.to_csv(f"{OUTPUT_DIR}/{exp_filename}", index=False)
+                files_saved.append(exp_filename)
+            
+            st.success(f"Solution generated! Saved: {', '.join(files_saved)}")
             
             st.subheader("Solution Preview")
             st.dataframe(solution.head(12), use_container_width=True)
@@ -665,13 +777,35 @@ elif page == "6. Generate Solution":
                             xaxis_title="Well", yaxis_title="Oil Production (BBL)")
             st.plotly_chart(fig, use_container_width=True)
             
-            csv_data = solution.to_csv(index=False)
-            st.download_button(
-                label="Download solution.csv",
-                data=csv_data,
-                file_name="solution.csv",
-                mime="text/csv"
-            )
+            col1, col2 = st.columns(2)
+            with col1:
+                csv_data = solution.to_csv(index=False)
+                st.download_button(
+                    label="Download solution.csv",
+                    data=csv_data,
+                    file_name="solution.csv",
+                    mime="text/csv"
+                )
+            with col2:
+                st.download_button(
+                    label=f"Download {experiment_name}.csv",
+                    data=csv_data,
+                    file_name=f"solution_{experiment_name}.csv",
+                    mime="text/csv"
+                )
+        
+        st.divider()
+        st.subheader("Compare Experiments")
+        
+        experiment_files = [f for f in os.listdir(OUTPUT_DIR) if f.startswith('solution_') and f.endswith('.csv')]
+        if experiment_files:
+            st.markdown(f"**Available experiment files:** {len(experiment_files)}")
+            for f in experiment_files:
+                exp_df = pd.read_csv(f"{OUTPUT_DIR}/{f}")
+                mean_pred = exp_df['Prediction_BBL'].mean()
+                st.markdown(f"- **{f}**: Mean = {mean_pred:,.0f} BBL")
+        else:
+            st.info("No experiment files yet. Run multiple experiments to compare!")
 
 elif page == "7. AI Assistant":
     st.header("🤖 AI ML Assistant")
