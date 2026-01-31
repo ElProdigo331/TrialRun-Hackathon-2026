@@ -162,28 +162,6 @@ streamlit run app.py --server.port 5000
 
 Nataly (Hackathon Architect): "Look for correlation of known wells in good sand/rock that historically produced oil to the training wells."
 
-### Spatial Proximity Features (User Insight):
-| Feature | Description |
-|---------|-------------|
-| **spatial_proximity_score** | 1 / (1 + XY_distance_to_high_producer) |
-| **spatial_production_estimate** | Weighted avg production based on XY proximity |
-| **high_producers_nearby** | Count of high producers within 30 grid units |
-
-User Insight: "Center region = low production, left/bottom = high production"
-
-### Best Depth Features (Preserve Depth Variation):
-Instead of just averaging rock properties, we capture the best intervals:
-
-| Feature | Description |
-|---------|-------------|
-| **best_phi_value** | Highest porosity at any depth |
-| **best_perm_value** | Highest permeability at any depth |
-| **perm_at_best_phi** | Permeability at the highest-porosity depth |
-| **phi_at_cleanest** | Porosity at the cleanest sand depth (lowest GR) |
-| **pay_zone_fraction** | Fraction of depths with good rock (high φ, high k, low GR) |
-
-Rationale: Some depths have very different rock features - the best intervals matter most for production.
-
 ### Spatial:
 - **X, Y** - Well coordinates
 - **sand_proportion** - From 2D seismic map
