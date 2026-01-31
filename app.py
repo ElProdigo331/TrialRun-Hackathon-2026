@@ -103,6 +103,56 @@ def aggregate_well_logs(well_logs_df):
     
     aggregated = well_logs_df.groupby('Well_ID').agg(**agg_dict).reset_index()
     
+    # BEST DEPTH FEATURES: Capture properties at the best rock intervals
+    # Don't just average - find the "pay zone" characteristics
+    best_depth_features = []
+    for well_id in well_logs_df['Well_ID'].unique():
+        well_data = well_logs_df[well_logs_df['Well_ID'] == well_id].copy()
+        
+        features = {'Well_ID': well_id}
+        
+        # Best phi depth (highest porosity interval)
+        if 'phi' in well_data.columns:
+            best_phi_idx = well_data['phi'].idxmax()
+            features['best_phi_depth'] = well_data.loc[best_phi_idx, 'Z']
+            features['best_phi_value'] = well_data.loc[best_phi_idx, 'phi']
+            if 'perm' in well_data.columns:
+                features['perm_at_best_phi'] = well_data.loc[best_phi_idx, 'perm']
+            if 'GR' in well_data.columns:
+                features['GR_at_best_phi'] = well_data.loc[best_phi_idx, 'GR']
+        
+        # Best perm depth (highest permeability interval)
+        if 'perm' in well_data.columns:
+            best_perm_idx = well_data['perm'].idxmax()
+            features['best_perm_depth'] = well_data.loc[best_perm_idx, 'Z']
+            features['best_perm_value'] = well_data.loc[best_perm_idx, 'perm']
+            if 'phi' in well_data.columns:
+                features['phi_at_best_perm'] = well_data.loc[best_perm_idx, 'phi']
+        
+        # Cleanest sand depth (lowest GR interval)
+        if 'GR' in well_data.columns:
+            best_GR_idx = well_data['GR'].idxmin()
+            features['cleanest_sand_depth'] = well_data.loc[best_GR_idx, 'Z']
+            features['cleanest_sand_GR'] = well_data.loc[best_GR_idx, 'GR']
+            if 'phi' in well_data.columns:
+                features['phi_at_cleanest'] = well_data.loc[best_GR_idx, 'phi']
+            if 'perm' in well_data.columns:
+                features['perm_at_cleanest'] = well_data.loc[best_GR_idx, 'perm']
+        
+        # Pay zone thickness: count depths with good rock (high phi, high perm, low GR)
+        if 'phi' in well_data.columns and 'perm' in well_data.columns and 'GR' in well_data.columns:
+            phi_thresh = well_data['phi'].quantile(0.5)
+            perm_thresh = well_data['perm'].quantile(0.5)
+            gr_thresh = well_data['GR'].quantile(0.5)
+            good_rock_mask = (well_data['phi'] >= phi_thresh) & (well_data['perm'] >= perm_thresh) & (well_data['GR'] <= gr_thresh)
+            features['pay_zone_count'] = good_rock_mask.sum()
+            features['pay_zone_fraction'] = good_rock_mask.mean()
+        
+        best_depth_features.append(features)
+    
+    best_depth_df = pd.DataFrame(best_depth_features)
+    aggregated = aggregated.merge(best_depth_df, on='Well_ID', how='left')
+    
     if 'facies' in well_logs_df.columns:
         facies_pivot = well_logs_df.groupby(['Well_ID', 'facies']).size().unstack(fill_value=0)
         facies_pivot = facies_pivot.div(facies_pivot.sum(axis=1), axis=0)
@@ -647,17 +697,67 @@ elif page == "4. Feature Engineering":
                 
                 st.success(f"Analog features created! Found {len(good_producers)} good producer wells (top 25%)")
             
+            # SPATIAL PROXIMITY TO HIGH PRODUCERS (User insight: left/bottom regions produce more)
+            st.info("Creating Spatial Proximity features...")
+            
+            if 'X' in df.columns and 'Y' in df.columns and 'Target_3yr_Oil_BBL' in df.columns:
+                # Identify high producer locations (top 25%)
+                high_prod_threshold = df['Target_3yr_Oil_BBL'].quantile(0.75)
+                high_producers = df[df['Target_3yr_Oil_BBL'] >= high_prod_threshold]
+                
+                # Calculate spatial distance (XY only) to high producers
+                high_prod_coords = high_producers[['X', 'Y']].values
+                
+                for dataset, name in [(df, 'train'), (test_df, 'test')]:
+                    well_coords = dataset[['X', 'Y']].values
+                    spatial_distances = cdist(well_coords, high_prod_coords, metric='euclidean')
+                    
+                    # Minimum spatial distance to any high producer
+                    dataset['spatial_dist_to_high_producer'] = spatial_distances.min(axis=1)
+                    
+                    # Spatial proximity score (inverse of distance)
+                    dataset['spatial_proximity_score'] = 1 / (1 + dataset['spatial_dist_to_high_producer'])
+                    
+                    # Weighted production estimate based on spatial proximity
+                    spatial_weights = 1 / (spatial_distances + 1)  # +1 to avoid div by zero
+                    spatial_weights = spatial_weights / spatial_weights.sum(axis=1, keepdims=True)
+                    dataset['spatial_production_estimate'] = (spatial_weights * high_producers['Target_3yr_Oil_BBL'].values).sum(axis=1)
+                    
+                    # Count of high producers within certain radius
+                    radius = 30  # Grid units
+                    dataset['high_producers_nearby'] = (spatial_distances < radius).sum(axis=1)
+                
+                st.success(f"Spatial proximity features created! (based on {len(high_producers)} high producers)")
+            
             st.session_state.train_df = df
             st.session_state.test_df = test_df
             st.success("Rock quality features created!")
             
             st.subheader("New Features Preview")
-            new_cols = ['Well_ID', 'phi_perm_product', 'rock_quality', 'impedance_ratio', 'net_to_gross', 'storage_capacity', 'flow_quality', 'analog_similarity', 'analog_production_proxy']
+            new_cols = ['Well_ID', 'phi_perm_product', 'rock_quality', 'net_to_gross', 
+                       'analog_similarity', 'analog_production_proxy',
+                       'spatial_proximity_score', 'spatial_production_estimate',
+                       'best_phi_value', 'best_perm_value', 'pay_zone_fraction']
             available_cols = [c for c in new_cols if c in df.columns]
             st.dataframe(df[available_cols].head(10), use_container_width=True)
             
-            st.subheader("Rock Quality Feature Correlations with Production")
-            for col in ['phi_perm_product', 'rock_quality', 'net_to_gross', 'storage_capacity', 'flow_quality', 'analog_similarity', 'analog_production_proxy']:
+            st.subheader("Feature Correlations with Production")
+            st.markdown("**Best Depth Features (preserve depth-level variation):**")
+            for col in ['best_phi_value', 'best_perm_value', 'perm_at_best_phi', 'phi_at_cleanest', 'pay_zone_fraction']:
+                if col in df.columns:
+                    corr = df[col].corr(df['Target_3yr_Oil_BBL'])
+                    direction = "↑" if corr > 0 else "↓"
+                    st.markdown(f"- **{col}**: {corr:.3f} {direction}")
+            
+            st.markdown("**Spatial Proximity Features (location matters):**")
+            for col in ['spatial_proximity_score', 'spatial_production_estimate', 'high_producers_nearby']:
+                if col in df.columns:
+                    corr = df[col].corr(df['Target_3yr_Oil_BBL'])
+                    direction = "↑" if corr > 0 else "↓"
+                    st.markdown(f"- **{col}**: {corr:.3f} {direction}")
+            
+            st.markdown("**Rock Quality & Analog Features:**")
+            for col in ['phi_perm_product', 'rock_quality', 'net_to_gross', 'analog_similarity', 'analog_production_proxy']:
                 if col in df.columns:
                     corr = df[col].corr(df['Target_3yr_Oil_BBL'])
                     direction = "↑" if corr > 0 else "↓"
