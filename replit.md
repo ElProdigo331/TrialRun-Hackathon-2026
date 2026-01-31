@@ -52,15 +52,34 @@ Each well has ~21 rows (depth measurements Z=19-39). Must aggregate to one row p
 
 ## ML Pipeline (7 Steps)
 
-1. **Data Loading, MICE & Aggregation** - Load data, apply MICE at depth level (before aggregation), then aggregate
+1. **Data Loading, MICE & Aggregation** - Load data, apply MICE+CART at depth level (before aggregation), then aggregate
 2. **Data Quality Verification** - Verify MICE was applied correctly, check for remaining missing values
 3. **Exploratory Data Analysis** - 4 tabs: Target Analysis, Feature Analysis, Correlations, **Rock Quality Analysis**
-4. **Feature Engineering** - 6 rock quality features (see below)
-5. **Model Training** - Interactive model selection (Linear/Ridge/RF), normalization toggle, sand map handling
+4. **Feature Engineering** - 19 features across 5 categories (see below)
+5. **Model Training** - Interactive model selection with full hyperparameters, metrics (R², MAE, RMSE, OOB), SHAP analysis
 6. **Generate Solution** - Point estimates + 100 realizations, experiment tracking & comparison
 7. **AI Assistant** - Chat interface for ML guidance
 
 **Note:** MICE is now applied at the depth level BEFORE aggregation per Van Buuren (2018) and Hallam et al. (2022). This preserves correlations and ensures all depth measurements contribute.
+
+---
+
+## Model Training Features (Per Hackathon Checklist)
+
+| Requirement | Status | Implementation |
+|-------------|--------|----------------|
+| Aggregation (mean, std, min, max) | ✅ Done | Well log aggregation function |
+| MICE imputation | ✅ Done | MICE+CART at depth level |
+| Hyperparameter tuning with Optuna | ✅ Done | 30 trials by default |
+| n_estimators | ✅ Done | 50-300 search range |
+| max_depth | ✅ Done | 3-20 search range |
+| min_samples_split | ✅ Done | 2-20 search range |
+| min_samples_leaf | ✅ Done | 1-10 search range |
+| max_features | ✅ Done | sqrt, log2, 0.5 options |
+| MAE and MSE metrics | ✅ Done | Displayed after training |
+| OOB samples | ✅ Done | oob_score=True for RF |
+| Residual bootstrapping | ✅ Done | 100 realizations (R1-R100) |
+| SHAP values | ✅ Done | TreeExplainer + summary plots |
 
 ---
 

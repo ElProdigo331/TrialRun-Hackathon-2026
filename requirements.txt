@@ -15,3 +15,4 @@ optuna
 statsmodels
 markdown
 xgboost
+shap

@@ -813,17 +813,20 @@ elif page == "5. Model Training":
                     n_estimators = st.slider("Number of Trees", 50, 300, 100, 50)
                     max_depth = st.selectbox("Max Depth", [None, 5, 10, 15, 20], index=3)
                     min_samples_split = st.slider("Min Samples Split", 2, 20, 5)
+                    max_features_option = st.selectbox("Max Features", ["sqrt", "log2", "0.5", "0.75", "1.0"], index=0, help="Number of features to consider for best split")
                 with col2:
                     min_samples_leaf = st.slider("Min Samples Leaf", 1, 10, 1)
                     ccp_alpha = st.slider("CCP Alpha (Pruning)", 0.0, 0.05, 0.0, 0.005)
                     min_impurity_decrease = st.slider("Min Impurity Decrease", 0.0, 0.1, 0.0, 0.01)
                 cv_folds = st.slider("Cross-Validation Folds", 3, 10, 5)
+                use_oob = st.checkbox("Use Out-of-Bag (OOB) Score", value=True, help="Evaluate model on OOB samples for additional insights")
             else:
                 with col1:
                     n_trials = st.slider("Optuna Trials", 10, 100, 30, 10)
                     cv_folds = st.slider("Cross-Validation Folds", 3, 10, 5)
+                    use_oob = st.checkbox("Use Out-of-Bag (OOB) Score", value=True)
                 with col2:
-                    st.info("Optuna will search:\n- n_estimators: 50-300\n- max_depth: 3-20\n- min_samples_split: 2-20\n- min_samples_leaf: 1-10\n- ccp_alpha: 0.0-0.05\n- min_impurity_decrease: 0.0-0.1")
+                    st.info("Optuna will search:\n- n_estimators: 50-300\n- max_depth: 3-20\n- min_samples_split: 2-20\n- min_samples_leaf: 1-10\n- max_features: sqrt, log2, 0.5\n- ccp_alpha: 0.0-0.05")
         
         elif model_type == "XGBoost":
             tuning_mode = st.radio(
@@ -907,13 +910,14 @@ elif page == "5. Model Training":
                     
                     with st.spinner(f"Optuna tuning model ({n_trials} trials)..."):
                         def objective(trial):
+                            max_feat = trial.suggest_categorical('max_features', ['sqrt', 'log2', 0.5])
                             params = {
                                 'n_estimators': trial.suggest_int('n_estimators', 50, 300),
                                 'max_depth': trial.suggest_int('max_depth', 3, 20),
                                 'min_samples_split': trial.suggest_int('min_samples_split', 2, 20),
                                 'min_samples_leaf': trial.suggest_int('min_samples_leaf', 1, 10),
+                                'max_features': max_feat,
                                 'ccp_alpha': trial.suggest_float('ccp_alpha', 0.0, 0.05),
-                                'min_impurity_decrease': trial.suggest_float('min_impurity_decrease', 0.0, 0.1),
                                 'random_state': 42,
                                 'n_jobs': -1
                             }
@@ -927,18 +931,22 @@ elif page == "5. Model Training":
                         best_params = study.best_params
                         best_params['random_state'] = 42
                         best_params['n_jobs'] = -1
+                        best_params['oob_score'] = use_oob
                         
-                        st.success(f"Best: trees={best_params['n_estimators']}, depth={best_params['max_depth']}, leaf={best_params['min_samples_leaf']}, alpha={best_params['ccp_alpha']:.4f}")
+                        st.success(f"Best: trees={best_params['n_estimators']}, depth={best_params['max_depth']}, max_features={best_params['max_features']}, leaf={best_params['min_samples_leaf']}")
                         
                         model = RandomForestRegressor(**best_params)
                 else:
+                    max_feat = float(max_features_option) if max_features_option in ['0.5', '0.75', '1.0'] else max_features_option
                     model = RandomForestRegressor(
                         n_estimators=n_estimators,
                         max_depth=max_depth,
                         min_samples_split=min_samples_split,
                         min_samples_leaf=min_samples_leaf,
+                        max_features=max_feat,
                         ccp_alpha=ccp_alpha,
                         min_impurity_decrease=min_impurity_decrease,
+                        oob_score=use_oob,
                         random_state=42,
                         n_jobs=-1
                     )
@@ -1010,10 +1018,20 @@ elif page == "5. Model Training":
             
             st.success(f"{model_type} trained successfully!")
             
-            col1, col2, col3 = st.columns(3)
+            from sklearn.metrics import mean_absolute_error, mean_squared_error
+            mae = mean_absolute_error(y, y_pred)
+            mse = mean_squared_error(y, y_pred)
+            rmse = np.sqrt(mse)
+            
+            col1, col2, col3, col4 = st.columns(4)
             col1.metric("CV R² Mean", f"{cv_scores.mean():.4f}")
-            col2.metric("CV R² Std", f"{cv_scores.std():.4f}")
-            col3.metric("Train R²", f"{r2_score(y, y_pred):.4f}")
+            col2.metric("Train R²", f"{r2_score(y, y_pred):.4f}")
+            col3.metric("MAE", f"{mae:,.0f} BBL")
+            col4.metric("RMSE", f"{rmse:,.0f} BBL")
+            
+            if hasattr(model, 'oob_score_') and model.oob_score:
+                st.metric("OOB R² Score", f"{model.oob_score_:.4f}")
+                st.info("OOB (Out-of-Bag) score provides an unbiased estimate of model performance using samples not used in each tree's training.")
             
             if hasattr(model, 'feature_importances_'):
                 st.subheader("Feature Importance")
@@ -1023,9 +1041,36 @@ elif page == "5. Model Training":
                 }).sort_values('Importance', ascending=False).head(20)
                 
                 fig = px.bar(importance_df, x='Importance', y='Feature', orientation='h',
-                            title="Top 20 Feature Importances")
+                            title="Top 20 Feature Importances (Built-in)")
                 fig.update_layout(yaxis={'categoryorder': 'total ascending'})
                 st.plotly_chart(fig, use_container_width=True)
+                
+                st.subheader("SHAP Feature Importance Analysis")
+                st.markdown("*SHAP values quantify each feature's contribution to predictions (Lundberg & Lee 2017)*")
+                
+                with st.spinner("Computing SHAP values..."):
+                    try:
+                        import shap
+                        import matplotlib.pyplot as plt
+                        
+                        explainer = shap.TreeExplainer(model)
+                        shap_values = explainer.shap_values(X)
+                        
+                        fig_shap, ax = plt.subplots(figsize=(10, 8))
+                        shap.summary_plot(shap_values, X, plot_type="bar", show=False, max_display=20)
+                        st.pyplot(fig_shap)
+                        plt.close()
+                        
+                        st.markdown("**SHAP Summary Plot (Beeswarm):**")
+                        fig_shap2, ax2 = plt.subplots(figsize=(10, 8))
+                        shap.summary_plot(shap_values, X, show=False, max_display=15)
+                        st.pyplot(fig_shap2)
+                        plt.close()
+                        
+                        st.success("SHAP analysis complete! This shows which geological/petrophysical factors drive production predictions.")
+                    except Exception as e:
+                        st.warning(f"SHAP analysis skipped: {str(e)}")
+            
             elif hasattr(model, 'coef_'):
                 st.subheader("Feature Coefficients (Linear Model)")
                 coef_df = pd.DataFrame({
