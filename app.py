@@ -372,7 +372,7 @@ elif page == "3. Exploratory Data Analysis":
     else:
         df = st.session_state.train_df
         
-        tab1, tab2, tab3 = st.tabs(["Target Analysis", "Feature Analysis", "Correlations"])
+        tab1, tab2, tab3, tab4 = st.tabs(["Target Analysis", "Feature Analysis", "Correlations", "Rock Quality Analysis"])
         
         with tab1:
             st.subheader("3-Year Oil Production Distribution")
@@ -430,6 +430,119 @@ elif page == "3. Exploratory Data Analysis":
                 st.subheader("Top 10 Correlations")
                 for feat, corr in correlations.head(10).items():
                     st.markdown(f"- **{feat}**: {corr:.3f}")
+        
+        with tab4:
+            st.subheader("Rock Quality vs Production (Industry Expert Insights)")
+            
+            st.info("""
+            **Industry Expert Advice:** "Good rock will more than likely have oil"
+            
+            In clastic/sandstone reservoirs, **good rock** means:
+            - **High porosity (phi)** → storage capacity
+            - **High permeability (perm)** → flow ability
+            - **Low Gamma Ray (GR)** → clean sand, less shale
+            - **High sand proportion** → better reservoir at location
+            """)
+            
+            rock_quality_features = {
+                'phi_mean': 'Porosity (Higher = More Storage)',
+                'perm_mean': 'Permeability (Higher = Better Flow)',
+                'GR_mean': 'Gamma Ray (Lower = Cleaner Sand)',
+                'sand_proportion': 'Sand Proportion (Higher = Better Rock)',
+                'rock_quality': 'Rock Quality Index (phi/GR)',
+                'phi_perm_product': 'Productivity Index (phi × log(perm))'
+            }
+            
+            available_rq = {k: v for k, v in rock_quality_features.items() if k in df.columns}
+            
+            if available_rq:
+                st.subheader("Rock Quality Indicators vs Oil Production")
+                
+                selected_rq = st.selectbox("Select Rock Quality Indicator:", 
+                                          list(available_rq.keys()),
+                                          format_func=lambda x: f"{x} - {available_rq[x]}")
+                
+                col1, col2 = st.columns(2)
+                with col1:
+                    fig = px.scatter(df, x=selected_rq, y='Target_3yr_Oil_BBL',
+                                   hover_data=['Well_ID'],
+                                   title=f"{selected_rq} vs Oil Production",
+                                   trendline="ols",
+                                   color='Target_3yr_Oil_BBL',
+                                   color_continuous_scale='RdYlGn')
+                    st.plotly_chart(fig, use_container_width=True)
+                
+                with col2:
+                    corr_val = df[selected_rq].corr(df['Target_3yr_Oil_BBL'])
+                    st.metric("Correlation with Production", f"{corr_val:.3f}")
+                    
+                    if corr_val > 0.3:
+                        st.success("Strong positive relationship - good rock indicator!")
+                    elif corr_val > 0.1:
+                        st.info("Moderate positive relationship")
+                    elif corr_val < -0.3:
+                        st.warning("Strong negative relationship (inverse indicator)")
+                    else:
+                        st.info("Weak relationship")
+                
+                st.divider()
+                st.subheader("Good vs Bad Rock Classification")
+                
+                if 'phi_mean' in df.columns and 'GR_mean' in df.columns:
+                    median_phi = df['phi_mean'].median()
+                    median_gr = df['GR_mean'].median()
+                    
+                    df['rock_class'] = 'Average'
+                    df.loc[(df['phi_mean'] > median_phi) & (df['GR_mean'] < median_gr), 'rock_class'] = 'Good Rock (High φ, Low GR)'
+                    df.loc[(df['phi_mean'] < median_phi) & (df['GR_mean'] > median_gr), 'rock_class'] = 'Poor Rock (Low φ, High GR)'
+                    
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        fig = px.scatter(df, x='phi_mean', y='GR_mean', 
+                                       color='rock_class',
+                                       size='Target_3yr_Oil_BBL',
+                                       hover_data=['Well_ID', 'Target_3yr_Oil_BBL'],
+                                       title="Rock Quality Classification",
+                                       color_discrete_map={
+                                           'Good Rock (High φ, Low GR)': 'green',
+                                           'Poor Rock (Low φ, High GR)': 'red',
+                                           'Average': 'gray'
+                                       })
+                        fig.add_hline(y=median_gr, line_dash="dash", line_color="gray")
+                        fig.add_vline(x=median_phi, line_dash="dash", line_color="gray")
+                        st.plotly_chart(fig, use_container_width=True)
+                    
+                    with col2:
+                        rock_stats = df.groupby('rock_class')['Target_3yr_Oil_BBL'].agg(['mean', 'count']).round(0)
+                        rock_stats.columns = ['Mean Production (BBL)', 'Well Count']
+                        st.dataframe(rock_stats, use_container_width=True)
+                        
+                        good_rock_prod = df[df['rock_class'] == 'Good Rock (High φ, Low GR)']['Target_3yr_Oil_BBL'].mean()
+                        poor_rock_prod = df[df['rock_class'] == 'Poor Rock (Low φ, High GR)']['Target_3yr_Oil_BBL'].mean()
+                        
+                        if good_rock_prod > poor_rock_prod:
+                            pct_diff = ((good_rock_prod - poor_rock_prod) / poor_rock_prod * 100)
+                            st.success(f"✅ Good rock produces **{pct_diff:.0f}% more** oil than poor rock!")
+                        
+                    df.drop('rock_class', axis=1, inplace=True)
+                
+                st.divider()
+                st.subheader("Location Impact on Production")
+                
+                if 'X' in df.columns and 'Y' in df.columns:
+                    fig = px.scatter(df, x='X', y='Y', 
+                                   color='Target_3yr_Oil_BBL',
+                                   size='Target_3yr_Oil_BBL',
+                                   hover_data=['Well_ID', 'phi_mean', 'perm_mean', 'GR_mean'],
+                                   title="Well Locations - Size & Color by Production",
+                                   color_continuous_scale='RdYlGn')
+                    st.plotly_chart(fig, use_container_width=True)
+                    
+                    x_corr = df['X'].corr(df['Target_3yr_Oil_BBL'])
+                    y_corr = df['Y'].corr(df['Target_3yr_Oil_BBL'])
+                    col1, col2 = st.columns(2)
+                    col1.metric("X-coordinate Correlation", f"{x_corr:.3f}")
+                    col2.metric("Y-coordinate Correlation", f"{y_corr:.3f}")
 
 elif page == "4. Feature Engineering":
     st.header("Step 4: Feature Engineering")
@@ -448,13 +561,24 @@ elif page == "4. Feature Engineering":
         - Sand proportion from seismic map
         """)
         
-        st.subheader("Additional Feature Engineering")
+        st.subheader("Rock Quality Feature Engineering (Industry Expert Advice)")
+        
+        st.info("""
+        **Industry Expert Insight:** "Take note of reservoir quality - good rock will more than likely have oil"
+        
+        Creating features that capture **good vs bad rock**:
+        """)
         
         st.markdown("""
-        **Proposed Additional Features:**
-        1. **phi_perm_product** = phi_mean × log(perm_mean) - productivity indicator
-        2. **rock_quality** = phi_mean / GR_mean - reservoir quality index
-        3. **impedance_ratio** = AI_mean / SI_mean - lithology indicator
+        **Rock Quality Features:**
+        | Feature | Formula | Interpretation |
+        |---------|---------|----------------|
+        | **phi_perm_product** | phi × log(perm) | Flow productivity (higher = better) |
+        | **rock_quality** | phi / GR | Clean sand index (higher = cleaner) |
+        | **impedance_ratio** | AI / SI | Lithology contrast |
+        | **net_to_gross** | (1 - facies_5% - facies_6%) | Sand vs shale ratio |
+        | **storage_capacity** | phi × (depth_range) | Total pore volume proxy |
+        | **flow_quality** | log(perm) / GR | Flow per unit shaliness |
         """)
         
         if st.button("Apply Feature Engineering", type="primary"):
@@ -467,15 +591,31 @@ elif page == "4. Feature Engineering":
                 
                 if 'AI_mean' in dataset.columns and 'SI_mean' in dataset.columns:
                     dataset['impedance_ratio'] = dataset['AI_mean'] / (dataset['SI_mean'] + 1)
+                
+                if 'facies_5_pct' in dataset.columns and 'facies_6_pct' in dataset.columns:
+                    dataset['net_to_gross'] = 1 - dataset['facies_5_pct'] - dataset['facies_6_pct']
+                
+                if 'phi_mean' in dataset.columns and 'depth_range' in dataset.columns:
+                    dataset['storage_capacity'] = dataset['phi_mean'] * dataset['depth_range']
+                
+                if 'perm_mean' in dataset.columns and 'GR_mean' in dataset.columns:
+                    dataset['flow_quality'] = np.log1p(dataset['perm_mean']) / (dataset['GR_mean'] + 1)
             
             st.session_state.train_df = df
             st.session_state.test_df = test_df
-            st.success("Feature engineering complete!")
+            st.success("Rock quality features created!")
             
             st.subheader("New Features Preview")
-            new_cols = ['Well_ID', 'phi_perm_product', 'rock_quality', 'impedance_ratio']
+            new_cols = ['Well_ID', 'phi_perm_product', 'rock_quality', 'impedance_ratio', 'net_to_gross', 'storage_capacity', 'flow_quality']
             available_cols = [c for c in new_cols if c in df.columns]
             st.dataframe(df[available_cols].head(10), use_container_width=True)
+            
+            st.subheader("Rock Quality Feature Correlations with Production")
+            for col in ['phi_perm_product', 'rock_quality', 'net_to_gross', 'storage_capacity', 'flow_quality']:
+                if col in df.columns:
+                    corr = df[col].corr(df['Target_3yr_Oil_BBL'])
+                    direction = "↑" if corr > 0 else "↓"
+                    st.markdown(f"- **{col}**: {corr:.3f} {direction}")
 
 elif page == "5. Model Training":
     st.header("Step 5: Model Training")
