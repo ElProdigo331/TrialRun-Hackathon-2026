@@ -52,13 +52,15 @@ Each well has ~21 rows (depth measurements Z=19-39). Must aggregate to one row p
 
 ## ML Pipeline (7 Steps)
 
-1. **Data Loading & Aggregation** - Load 4 data files, aggregate multi-row to one per well
-2. **Data Cleaning (MICE)** - Handle 7-10% missing values with MICE imputation
+1. **Data Loading, MICE & Aggregation** - Load data, apply MICE at depth level (before aggregation), then aggregate
+2. **Data Quality Verification** - Verify MICE was applied correctly, check for remaining missing values
 3. **Exploratory Data Analysis** - Visualize targets, features, correlations
 4. **Feature Engineering** - phi_perm_product, rock_quality, impedance_ratio
 5. **Model Training** - Random Forest with Optuna auto-tuning
 6. **Generate Solution** - Point estimates + 100 realizations via residual bootstrapping
 7. **AI Assistant** - Chat interface for ML guidance
+
+**Note:** MICE is now applied at the depth level BEFORE aggregation per Van Buuren (2018) and Hallam et al. (2022). This preserves correlations and ensures all depth measurements contribute.
 
 ---
 

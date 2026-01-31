@@ -13,7 +13,7 @@ This document provides peer-reviewed academic justification for each step in our
 | Step | Decision | Primary Source |
 |------|----------|----------------|
 | 1. Data Aggregation | Multi-row to single-row via statistical aggregates | Torres Caceres et al. (2024); AAPG Wiki |
-| 2. Missing Data | Aggregation handles 7.3% missing (acceptable) | Van Buuren (2018); Hallam et al. (2022) |
+| 2. Missing Data | MICE before aggregation (7.3%) | Van Buuren (2018); Hallam et al. (2022) |
 | 3. Feature Engineering | Physics-based derived features | Amaefule et al. (1993); Cao et al. (2025) |
 | 4. Model Selection | Random Forest Regression | Al shaba'an & Nemer (2024): 99% accuracy |
 | 5. Hyperparameter Tuning | Optuna (TPE sampler) | Akiba et al. (2019, KDD) |
@@ -80,7 +80,7 @@ Your raw data has **7.3% missing values** across petrophysical features. How sho
 
 ## Our Approach
 
-Currently: Aggregation functions (mean, std, etc.) naturally skip NaN values.
+**MICE imputation at the depth level BEFORE aggregation** — the academically correct approach.
 
 ## Research Justification
 
@@ -118,9 +118,9 @@ We tested both approaches on your actual data:
 | Maximum difference | **15.67%** |
 | Correlation preservation | **Maintained (r > 0.93)** |
 
-## Verdict: ✅ ACCEPTABLE (⚠️ OPTIONAL ENHANCEMENT)
+## Verdict: ✅ STRONGLY SUPPORTED (IMPLEMENTED)
 
-At 7.3% missing, aggregation-based handling is defensible. For maximum rigor, MICE-before-aggregation could be implemented.
+We now apply MICE at the depth level before aggregation, the academically recommended approach. This ensures all 21 depth measurements per well contribute to aggregated statistics.
 
 ---
 
@@ -429,7 +429,7 @@ We use all 71 wells for final model training.
 | Step | Method | Key Source | Verdict |
 |------|--------|------------|---------|
 | 1. Aggregation | Mean/Std/Min/Max across depths | AAPG Wiki; Torres Caceres (2024) | ✅ |
-| 2. Missing Data | Aggregation-based handling (7.3%) | Van Buuren (2018); Hallam (2022) | ✅ |
+| 2. Missing Data | MICE before aggregation (7.3%) | Van Buuren (2018); Hallam (2022) | ✅ |
 | 3. Features | phi_perm_product, rock_quality, etc. | Amaefule (1993); Cao (2025) | ✅ |
 | 4. Model | Random Forest | Al shaba'an & Nemer (2024): 99% | ✅ |
 | 5. Tuning | Optuna TPE | Akiba et al. (2019, KDD) | ✅ |
