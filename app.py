@@ -148,7 +148,8 @@ pages = [
     "4. Feature Engineering",
     "5. Model Training",
     "6. Generate Solution",
-    "7. AI Assistant"
+    "7. AI Assistant",
+    "8. Scholarly Analysis"
 ]
 
 page = sidebar.radio("Select Step:", pages)
@@ -736,3 +737,52 @@ Provide helpful, practical advice for winning the hackathon."""
                 except Exception as e:
                     error_msg = f"Error: {str(e)}"
                     st.error(error_msg)
+
+elif page == "8. Scholarly Analysis":
+    st.header("Scholarly Analysis: Research Backing for Our Workflow")
+    
+    st.markdown("""
+    This document provides peer-reviewed justification for every methodological decision in our ML pipeline.
+    Use this for your presentation or to understand why each technique was chosen.
+    """)
+    
+    scholarly_file = "outputs/WORKFLOW_SCHOLARLY_ANALYSIS.md"
+    
+    try:
+        with open(scholarly_file, 'r') as f:
+            scholarly_content = f.read()
+        
+        col1, col2 = st.columns([3, 1])
+        with col1:
+            st.info("**Tip:** To save as PDF, click the button below to open in a new view, then use Ctrl+P (or Cmd+P on Mac) to print/save as PDF.")
+        with col2:
+            st.download_button(
+                label="Download Markdown",
+                data=scholarly_content,
+                file_name="WORKFLOW_SCHOLARLY_ANALYSIS.md",
+                mime="text/markdown"
+            )
+        
+        st.divider()
+        
+        with st.expander("View Full Scholarly Analysis", expanded=True):
+            st.markdown(scholarly_content)
+        
+        st.divider()
+        
+        st.subheader("Quick Reference: Key Citations")
+        
+        citations = {
+            "MICE Imputation": "Van Buuren (2018); Hallam et al. (2022); SPE 218890 (Abdulkhaleq 2024)",
+            "CART Estimator": "SPE 218890: 'MICE + CART outperformed other methods'",
+            "Random Forest": "Al shaba'an & Nemer (2024): 99% accuracy in oil production prediction",
+            "Optuna (TPE)": "Akiba et al. (2019, KDD Best Paper)",
+            "Residual Bootstrap": "Pan & Politis (2014); Palmer et al. (2022)",
+            "Feature Engineering": "Amaefule et al. (1993); Cao et al. (2025)"
+        }
+        
+        for technique, citation in citations.items():
+            st.markdown(f"**{technique}:** {citation}")
+            
+    except FileNotFoundError:
+        st.error(f"Scholarly analysis file not found at {scholarly_file}. Please run the workflow first.")
