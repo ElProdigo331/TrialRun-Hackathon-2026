@@ -743,7 +743,6 @@ elif page == "8. Scholarly Analysis":
     
     st.markdown("""
     This document provides peer-reviewed justification for every methodological decision in our ML pipeline.
-    Use this for your presentation or to understand why each technique was chosen.
     """)
     
     scholarly_file = "outputs/WORKFLOW_SCHOLARLY_ANALYSIS.md"
