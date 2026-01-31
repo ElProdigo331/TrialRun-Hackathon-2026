@@ -777,7 +777,7 @@ elif page == "5. Model Training":
         with col1:
             model_type = st.selectbox(
                 "Model Type",
-                ["Random Forest", "Linear Regression", "Ridge Regression"],
+                ["Random Forest", "XGBoost", "Linear Regression", "Ridge Regression"],
                 help="Try Linear first as baseline (Dr. Pyrcz's advice)"
             )
         
@@ -821,6 +821,32 @@ elif page == "5. Model Training":
                     cv_folds = st.slider("Cross-Validation Folds", 3, 10, 5)
                 with col2:
                     st.info("Optuna will search:\n- n_estimators: 50-300\n- max_depth: 3-20\n- min_samples_split: 2-20")
+        
+        elif model_type == "XGBoost":
+            tuning_mode = st.radio(
+                "Hyperparameter Tuning Mode:",
+                ["Manual", "Optuna (Auto-Tune)"],
+                help="Optuna automatically finds optimal hyperparameters"
+            )
+            
+            col1, col2 = st.columns(2)
+            
+            if tuning_mode == "Manual":
+                with col1:
+                    xgb_n_estimators = st.slider("Number of Trees", 50, 500, 100, 50)
+                    xgb_max_depth = st.slider("Max Depth", 3, 15, 6)
+                    xgb_learning_rate = st.slider("Learning Rate", 0.01, 0.3, 0.1, 0.01)
+                with col2:
+                    xgb_subsample = st.slider("Subsample", 0.5, 1.0, 0.8, 0.1)
+                    xgb_colsample = st.slider("Column Sample", 0.5, 1.0, 0.8, 0.1)
+                    cv_folds = st.slider("Cross-Validation Folds", 3, 10, 5)
+            else:
+                with col1:
+                    n_trials = st.slider("Optuna Trials", 10, 100, 30, 10)
+                    cv_folds = st.slider("Cross-Validation Folds", 3, 10, 5)
+                with col2:
+                    st.info("Optuna will search:\n- n_estimators: 50-500\n- max_depth: 3-15\n- learning_rate: 0.01-0.3\n- subsample: 0.5-1.0\n- colsample: 0.5-1.0")
+        
         else:
             tuning_mode = "Manual"
             cv_folds = st.slider("Cross-Validation Folds", 3, 10, 5)
@@ -907,6 +933,50 @@ elif page == "5. Model Training":
                         random_state=42,
                         n_jobs=-1
                     )
+            elif model_type == "XGBoost":
+                import xgboost as xgb
+                
+                if tuning_mode == "Optuna (Auto-Tune)":
+                    import optuna
+                    optuna.logging.set_verbosity(optuna.logging.WARNING)
+                    
+                    with st.spinner(f"Optuna tuning XGBoost ({n_trials} trials)..."):
+                        def objective(trial):
+                            params = {
+                                'n_estimators': trial.suggest_int('n_estimators', 50, 500),
+                                'max_depth': trial.suggest_int('max_depth', 3, 15),
+                                'learning_rate': trial.suggest_float('learning_rate', 0.01, 0.3),
+                                'subsample': trial.suggest_float('subsample', 0.5, 1.0),
+                                'colsample_bytree': trial.suggest_float('colsample_bytree', 0.5, 1.0),
+                                'random_state': 42,
+                                'n_jobs': -1
+                            }
+                            model = xgb.XGBRegressor(**params)
+                            scores = cross_val_score(model, X, y, cv=cv_folds, scoring='r2')
+                            return scores.mean()
+                        
+                        study = optuna.create_study(direction='maximize')
+                        study.optimize(objective, n_trials=n_trials, show_progress_bar=False)
+                        
+                        best_params = study.best_params
+                        best_params['random_state'] = 42
+                        best_params['n_jobs'] = -1
+                        
+                        st.success(f"Best params: lr={best_params['learning_rate']:.3f}, depth={best_params['max_depth']}, trees={best_params['n_estimators']}")
+                        
+                        model = xgb.XGBRegressor(**best_params)
+                else:
+                    model = xgb.XGBRegressor(
+                        n_estimators=xgb_n_estimators,
+                        max_depth=xgb_max_depth,
+                        learning_rate=xgb_learning_rate,
+                        subsample=xgb_subsample,
+                        colsample_bytree=xgb_colsample,
+                        random_state=42,
+                        n_jobs=-1
+                    )
+                    st.info(f"Using XGBoost: lr={xgb_learning_rate}, depth={xgb_max_depth}, trees={xgb_n_estimators}")
+            
             elif model_type == "Linear Regression":
                 model = LinearRegression()
                 st.info("Using Linear Regression (Dr. Pyrcz's baseline recommendation)")

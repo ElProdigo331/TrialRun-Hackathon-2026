@@ -95,7 +95,7 @@ From 4 industry heads at the hackathon:
 
 | Option | Choices | Purpose |
 |--------|---------|---------|
-| **Model Type** | Linear Regression, Ridge, Random Forest | Try simple first (Dr. Pyrcz) |
+| **Model Type** | Linear Regression, Ridge, Random Forest, XGBoost | Try simple first (Dr. Pyrcz) |
 | **Normalize Features** | Checkbox (default: ON) | StandardScaler |
 | **Sand Map Handling** | Include, Exclude, Smooth (3x3), Smooth (5x5) | Handle noisy sand map (Dinghan Wang) |
 | **Experiment Name** | Auto-generated | Labels output files for comparison |
