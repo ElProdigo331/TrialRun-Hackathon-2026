@@ -11,7 +11,7 @@ I prefer detailed explanations.
 Ask before making major changes.
 
 ## Winning Model Configuration
-- **Model:** Ridge Regression (alpha=0.1)
+- **Model:** Ridge Regression (alpha=1.0)
 - **Normalization:** StandardScaler (CRITICAL)
 - **Feature Selection:** Correlation filter (105→61) + Stepwise (61→10)
 - **Sand Map:** Smooth 3x3

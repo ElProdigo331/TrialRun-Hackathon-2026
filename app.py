@@ -2125,7 +2125,7 @@ For this dataset: RMSE < 3.3M BBL is excellent, < 5M BBL is good, < 6.7M BBL is 
 
 ## OUR WINNING CONFIGURATION (FINAL SUBMISSION)
 We achieved EXCELLENT results with this exact configuration:
-- **Model:** Ridge Regression with alpha=0.1
+- **Model:** Ridge Regression with alpha=1.0
 - **Test R²:** 0.9905 (Excellent ≥0.93)
 - **CV R²:** 0.9539 ± 0.0456
 - **Test RMSE:** 1.57M BBL (4.7% of mean - Excellent <10%)
@@ -2264,10 +2264,10 @@ When features are highly correlated, keep based on physical importance:
 ## HYPERPARAMETER DECISIONS
 
 ### Ridge Regression (alpha)
-- **alpha = 0.1**: Light regularization, prevents overfitting
+- **alpha = 1.0**: Balanced regularization, prevents overfitting
 - Too low (0.001): Approaches OLS, may overfit
 - Too high (10+): Underfits, shrinks coefficients too much
-- We tested [0.01, 0.1, 1, 10] - alpha=0.1 was optimal
+- We tested [0.01, 0.1, 1, 10] - alpha=1.0 was optimal
 
 ### Random Forest (if asked)
 - n_estimators: 100-500 (more is better but slower)
@@ -2303,7 +2303,7 @@ When features are highly correlated, keep based on physical importance:
 - Natural way to generate 100 realizations
 
 ## COMMON ISSUES & SOLUTIONS
-1. **Train R² = 1.0, Val R² << 0** → Linear Regression overfitting! Switch to Ridge with alpha=0.1-1.0
+1. **Train R² = 1.0, Val R² << 0** → Linear Regression overfitting! Switch to Ridge with alpha=1.0
 2. **Low CV R² with high variance** → Use stepwise feature selection to reduce features
 3. **Ridge outperforming Random Forest** → Expected for small datasets (n=71), this is correct
 4. **Forget normalization** → CRITICAL for Ridge! Always use StandardScaler
@@ -2328,7 +2328,7 @@ When features are highly correlated, keep based on physical importance:
 3. Reference industry benchmarks AND our tested results when evaluating
 4. Use tables and bullet points for clarity
 5. If asked about their results, compare to our best (R²=0.9905) and industry benchmarks
-6. Always recommend: Ridge, alpha=0.1, normalize=True, stepwise selection, Bagging uncertainty
+6. Always recommend: Ridge, alpha=1.0, normalize=True, stepwise selection, Bagging uncertainty
 7. Be encouraging - we achieved EXCELLENT results that should be reproduced
 8. When discussing feature importance, emphasize PHI (porosity) as the primary driver
 9. Provide domain knowledge context for petrophysical properties
