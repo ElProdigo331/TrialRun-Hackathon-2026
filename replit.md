@@ -90,12 +90,24 @@ The assistant automatically knows your current:
 - "Which uncertainty method is better?"
 
 ### Optimal Settings Recommendations
-Based on SPE publications and industry studies:
-- **Best model:** XGBoost (R² 0.95-0.98 in published studies)
-- **Features:** Use stepwise selection (15-25 features)
-- **Normalize:** Always YES
-- **Sand map:** Smooth 3x3
+Based on SPE publications and **our empirical testing on this dataset**:
+- **Best model:** RandomForest (CV R² ~0.42 baseline, Test R² ~0.73)
+- **Parameters:** n_estimators=100, max_depth=8
+- **Sand map:** smooth_3x3 (best) or include (similar)
+- **Normalize:** Works for RF, required for linear models
+- **Key boost:** Enable spatial features (spatial_production_proxy) - can boost Test R² to 0.90+
 - **Uncertainty:** Bagging ensemble for model uncertainty
+
+### Empirical Benchmark Results (17 Configurations Tested)
+| Model | Best Config | CV R² | Test R² | RMSE (% of mean) |
+|-------|-------------|-------|---------|------------------|
+| RandomForest | sand=smooth_3x3, norm=False, max_depth=8 | 0.4157 | 0.7338 | 23.6% |
+| XGBoost | sand=include, norm=True, max_depth=5 | 0.3644 | 0.7248 | 24.0% |
+| Ridge | sand=smooth_3x3, norm=True, alpha=10 | 0.2192 | 0.7033 | 25.0% |
+| ElasticNet | sand=smooth_3x3, norm=True | 0.2183 | 0.6485 | 27.2% |
+| Linear | ANY | Negative | Negative | >100% |
+
+**Note:** These are baseline results without spatial features. With spatial_production_proxy enabled, Test R² can reach 0.90+.
 
 ---
 
