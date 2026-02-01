@@ -2,6 +2,10 @@
 
 **Team:** Brain Oil (Kailasadatta Boggaram, Jayanth Damodaran, Bilal Shihab, Carlos Fabela)
 
+## Live Demo
+
+**[Click here to try the web app](https://EnergyGladiators-adaptive-data-science.replit.app)**
+
 ## Overview
 
 This is a complete machine learning workflow application for the Energy AI Hackathon 2026. It predicts **3-year cumulative oil production (BBL)** for 12 preproduction wells using well log data from a clastic/sandstone reservoir. The solution includes point estimates and 100 uncertainty realizations (R1-R100) per prediction.
