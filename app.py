@@ -1110,16 +1110,17 @@ elif page == "5. Model Training":
                         explainer = shap.TreeExplainer(model)
                         shap_values = explainer.shap_values(X)
                         
-                        fig_shap, ax = plt.subplots(figsize=(10, 8))
+                        # SHAP Bar Plot - SHAP creates its own figure, so use gcf()
+                        plt.figure(figsize=(10, 8))
                         shap.summary_plot(shap_values, X, plot_type="bar", show=False, max_display=20)
-                        st.pyplot(fig_shap)
-                        plt.close()
+                        st.pyplot(plt.gcf())
+                        plt.close('all')
                         
                         st.markdown("**SHAP Summary Plot (Beeswarm):**")
-                        fig_shap2, ax2 = plt.subplots(figsize=(10, 8))
+                        plt.figure(figsize=(10, 8))
                         shap.summary_plot(shap_values, X, show=False, max_display=15)
-                        st.pyplot(fig_shap2)
-                        plt.close()
+                        st.pyplot(plt.gcf())
+                        plt.close('all')
                         
                         st.success("SHAP analysis complete! This shows which geological/petrophysical factors drive production predictions.")
                     except Exception as e:
