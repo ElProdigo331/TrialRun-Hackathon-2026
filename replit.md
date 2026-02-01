@@ -58,9 +58,44 @@ Each well has ~21 rows (depth measurements Z=19-39). Must aggregate to one row p
 4. **Feature Engineering** - 19 features across 5 categories (see below)
 5. **Model Training** - Interactive model selection with full hyperparameters, metrics (R², MAE, RMSE, OOB), SHAP analysis
 6. **Generate Solution** - Point estimates + 100 realizations, experiment tracking & comparison
-7. **AI Assistant** - Chat interface for ML guidance
+7. **AI Assistant** - Enhanced chat interface with industry benchmarks, session context awareness, and actionable recommendations
 
 **Note:** MICE is now applied at the depth level BEFORE aggregation per Van Buuren (2018) and Hallam et al. (2022). This preserves correlations and ensures all depth measurements contribute.
+
+---
+
+## AI Assistant Features
+
+The AI ML Assistant provides expert guidance with:
+
+### Industry Benchmarks (Built-In Knowledge)
+| Performance Level | R² Range | RMSE (% of mean) | For This Dataset |
+|-------------------|----------|------------------|------------------|
+| Excellent | ≥ 0.93 | < 10% | RMSE < 3.3M BBL |
+| Good | 0.85-0.93 | 10-15% | RMSE 3.3-5M BBL |
+| Acceptable | 0.75-0.85 | 15-20% | RMSE 5-6.7M BBL |
+| Needs Improvement | < 0.75 | > 20% | RMSE > 6.7M BBL |
+
+### Session Context Awareness
+The assistant automatically knows your current:
+- Model type and experiment name
+- CV R² scores and best hyperparameters
+- Top feature importances
+- Training results
+
+### Suggested Questions
+- "What's the best model to start with?"
+- "Is my R² of 0.85 good enough?"
+- "How can I improve my model's accuracy?"
+- "Which uncertainty method is better?"
+
+### Optimal Settings Recommendations
+Based on SPE publications and industry studies:
+- **Best model:** XGBoost (R² 0.95-0.98 in published studies)
+- **Features:** Use stepwise selection (15-25 features)
+- **Normalize:** Always YES
+- **Sand map:** Smooth 3x3
+- **Uncertainty:** Bagging ensemble for model uncertainty
 
 ---
 
