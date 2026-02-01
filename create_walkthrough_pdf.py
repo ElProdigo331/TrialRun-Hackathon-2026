@@ -176,10 +176,10 @@ def create_walkthrough_pdf():
     timeline_data = [
         ['Section', 'Time', 'Slides'],
         ['Introduction & Problem', '1 min', '1-2'],
-        ['Data & Methodology', '3 min', '3-6'],
-        ['Results & Why Ridge Won', '3 min', '7-10'],
-        ['Predictions & Uncertainty', '2 min', '11-12'],
-        ['Conclusion & Q&A', '1 min', '13-14']
+        ['Data & Methodology', '3 min', '3-7'],
+        ['Results & Why Ridge Won', '3 min', '8-11'],
+        ['Predictions & Uncertainty', '2 min', '12-13'],
+        ['Conclusion & Q&A', '1 min', '14-15']
     ]
     timeline_table = Table(timeline_data, colWidths=[3*inch, 1.2*inch, 1.2*inch])
     timeline_table.setStyle(TableStyle([
@@ -224,7 +224,7 @@ def create_walkthrough_pdf():
     story.append(PageBreak())
     
     story.append(Paragraph("PART 2: DATA & METHODOLOGY", section_style))
-    story.append(Paragraph("Slides 3-6 | Notebook Cells 4-15", subtitle_style))
+    story.append(Paragraph("Slides 3-7 | Notebook Cells 4-15", subtitle_style))
     story.append(Spacer(1, 10))
     
     story.append(Paragraph("Understanding the Data (Slide 3)", subsection_style))
@@ -264,15 +264,31 @@ def create_walkthrough_pdf():
     
     story.append(Paragraph("<b>KEY POINT:</b> We started with 105 features and narrowed down to 10 optimal ones.", highlight_style))
     story.append(Spacer(1, 10))
-    story.append(Paragraph("<b>TRANSITION:</b> \"Now, which model did we choose and why?\"", talking_point_style))
+    story.append(Paragraph("<b>TRANSITION:</b> \"Let me show you our spatial analysis...\"", talking_point_style))
+    story.append(Spacer(1, 15))
+    
+    story.append(Paragraph("Spatial Analysis: Sand Heat Map (Slide 7)", subsection_style))
+    story.append(Paragraph("<b>SAY:</b> \"This is our spatial analysis map. The background shows sand proportion - "
+                          "yellow means more sand, darker means more shale. The dots are our wells.\"", talking_point_style))
+    story.append(Spacer(1, 5))
+    story.append(Paragraph("• <b>Circles</b> - Production wells (color = actual 3-year oil production)", bullet_style))
+    story.append(Paragraph("• <b>X markers</b> - Pre-production wells (color = our predictions)", bullet_style))
+    story.append(Paragraph("• <b>Yellow background</b> - High sand proportion (better reservoir quality)", bullet_style))
+    story.append(Spacer(1, 10))
+    story.append(Paragraph("<b>SAY:</b> \"Notice how the highest-producing wells (green/yellow dots) tend to be in "
+                          "higher sand areas. This validates that our spatial features are capturing real geology.\"", talking_point_style))
+    story.append(Spacer(1, 10))
+    story.append(Paragraph("<b>KEY POINT:</b> Geology matters - high sand = high production. Our model learns this pattern.", highlight_style))
+    story.append(Spacer(1, 10))
+    story.append(Paragraph("<b>TRANSITION:</b> \"Now let's see how our model performed...\"", talking_point_style))
     
     story.append(PageBreak())
     
     story.append(Paragraph("PART 3: RESULTS & WHY RIDGE WON", section_style))
-    story.append(Paragraph("Slides 7-10 | Notebook Cells 16-25", subtitle_style))
+    story.append(Paragraph("Slides 8-11 | Notebook Cells 16-25", subtitle_style))
     story.append(Spacer(1, 10))
     
-    story.append(Paragraph("Model Comparison (Slide 7)", subsection_style))
+    story.append(Paragraph("Model Comparison (Slide 8)", subsection_style))
     story.append(Paragraph("<b>SAY:</b> \"We tested 57 different configurations across 4 model types. Here's what we found:\"", talking_point_style))
     story.append(Spacer(1, 10))
     
@@ -301,7 +317,7 @@ def create_walkthrough_pdf():
     story.append(model_table)
     story.append(Spacer(1, 15))
     
-    story.append(Paragraph("Why Ridge Beat Complex Models (Slide 8)", subsection_style))
+    story.append(Paragraph("Why Ridge Beat Complex Models (Slide 9)", subsection_style))
     story.append(Paragraph("<b>SAY:</b> \"You might ask - why did a simple model beat fancy ones like XGBoost? "
                           "The answer is in the data size.\"", talking_point_style))
     story.append(Spacer(1, 10))
@@ -314,7 +330,7 @@ def create_walkthrough_pdf():
     story.append(Paragraph("<b>SAY:</b> \"With only 71 training wells, complex models overfit. Ridge keeps it simple and stable.\"", talking_point_style))
     story.append(Spacer(1, 10))
     
-    story.append(Paragraph("Our Performance Metrics (Slide 9)", subsection_style))
+    story.append(Paragraph("Our Performance Metrics (Slide 10)", subsection_style))
     metrics_data = [
         ['Metric', 'Our Result', 'Industry Benchmark', 'Status'],
         ['Test R²', '0.9905', '≥ 0.93 = Excellent', 'EXCELLENT'],
@@ -341,7 +357,7 @@ def create_walkthrough_pdf():
                           "The error is only 4.7% of the average production - well within industry standards.\"", talking_point_style))
     story.append(Spacer(1, 10))
     
-    story.append(Paragraph("Feature Importance (Slide 10)", subsection_style))
+    story.append(Paragraph("Feature Importance (Slide 11)", subsection_style))
     story.append(Paragraph("<b>SAY:</b> \"The top predictor is porosity - phi_mean. This makes perfect sense because "
                           "porosity directly measures how much oil the rock can store.\"", talking_point_style))
     story.append(Spacer(1, 5))
@@ -356,17 +372,17 @@ def create_walkthrough_pdf():
     story.append(PageBreak())
     
     story.append(Paragraph("PART 4: PREDICTIONS & UNCERTAINTY", section_style))
-    story.append(Paragraph("Slides 11-12 | Notebook Cells 26-32", subtitle_style))
+    story.append(Paragraph("Slides 12-13 | Notebook Cells 26-32", subtitle_style))
     story.append(Spacer(1, 10))
     
-    story.append(Paragraph("Final Predictions (Slide 11)", subsection_style))
+    story.append(Paragraph("Final Predictions (Slide 12)", subsection_style))
     story.append(Paragraph("<b>SAY:</b> \"Here are our predictions for the 12 new wells. Production ranges from about "
                           "15 million to 47 million barrels over 3 years.\"", talking_point_style))
     story.append(Spacer(1, 10))
     story.append(Paragraph("<b>SHOW:</b> Point to the prediction chart showing all 12 wells.", talking_point_style))
     story.append(Spacer(1, 10))
     
-    story.append(Paragraph("Uncertainty Quantification (Slide 12)", subsection_style))
+    story.append(Paragraph("Uncertainty Quantification (Slide 13)", subsection_style))
     story.append(Paragraph("<b>SAY:</b> \"Predictions are only useful if we know how confident we are. We used a technique "
                           "called Bagging - training 100 different models and combining their predictions.\"", talking_point_style))
     story.append(Spacer(1, 5))
@@ -387,10 +403,10 @@ def create_walkthrough_pdf():
     story.append(PageBreak())
     
     story.append(Paragraph("PART 5: CONCLUSION", section_style))
-    story.append(Paragraph("Slides 13-14 | Summary", subtitle_style))
+    story.append(Paragraph("Slides 14-15 | Summary", subtitle_style))
     story.append(Spacer(1, 10))
     
-    story.append(Paragraph("Key Achievements (Slide 13)", subsection_style))
+    story.append(Paragraph("Key Achievements (Slide 14)", subsection_style))
     story.append(Paragraph("<b>SAY:</b> \"To summarize what we accomplished:\"", talking_point_style))
     story.append(Spacer(1, 10))
     story.append(Paragraph("1. <b>Excellent accuracy</b> - 99% R², 4.7% error rate", bullet_style))
@@ -399,12 +415,12 @@ def create_walkthrough_pdf():
     story.append(Paragraph("4. <b>Interactive application</b> - Streamlit app for real-time experimentation", bullet_style))
     story.append(Spacer(1, 10))
     
-    story.append(Paragraph("Why Our Approach Works (Slide 13 continued)", subsection_style))
+    story.append(Paragraph("Why Our Approach Works (Slide 14 continued)", subsection_style))
     story.append(Paragraph("<b>SAY:</b> \"We succeeded because we matched the model complexity to the data size. "
                           "With 71 wells, simplicity wins over complexity.\"", talking_point_style))
     story.append(Spacer(1, 15))
     
-    story.append(Paragraph("Thank You & Questions (Slide 14)", subsection_style))
+    story.append(Paragraph("Thank You & Questions (Slide 15)", subsection_style))
     story.append(Paragraph("<b>SAY:</b> \"Thank you for your attention. We're happy to answer any questions about our "
                           "methodology, the domain science, or our interactive application.\"", talking_point_style))
     story.append(Spacer(1, 20))
