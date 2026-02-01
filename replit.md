@@ -50,15 +50,17 @@ Each well has ~21 rows (depth measurements Z=19-39). Must aggregate to one row p
 
 ---
 
-## ML Pipeline (7 Steps)
+## ML Pipeline (9 Steps)
 
 1. **Data Loading, MICE & Aggregation** - Load data, apply MICE+CART at depth level (before aggregation), then aggregate
 2. **Data Quality Verification** - Verify MICE was applied correctly, check for remaining missing values
 3. **Exploratory Data Analysis** - 4 tabs: Target Analysis, Feature Analysis, Correlations, **Rock Quality Analysis**
 4. **Feature Engineering** - 19 features across 5 categories (see below)
-5. **Model Training** - Interactive model selection with full hyperparameters, metrics (R², MAE, RMSE, OOB), SHAP analysis
+5. **Model Training** - Interactive model selection with full hyperparameters, metrics (R², MAE, RMSE, OOB), SHAP analysis, **auto-saves to experiment history**
 6. **Generate Solution** - Point estimates + 100 realizations, experiment tracking & comparison
 7. **AI Assistant** - Enhanced chat interface with industry benchmarks, session context awareness, and actionable recommendations
+8. **Experiment Leaderboard** - **NEW!** View all experiments ranked by Test R², compare models, see best configurations
+9. **Scholarly Analysis** - Peer-reviewed citations and methodology justification
 
 **Note:** MICE is now applied at the depth level BEFORE aggregation per Van Buuren (2018) and Hallam et al. (2022). This preserves correlations and ensures all depth measurements contribute.
 
