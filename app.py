@@ -777,7 +777,7 @@ elif page == "5. Model Training":
         with col1:
             model_type = st.selectbox(
                 "Model Type",
-                ["Random Forest", "XGBoost", "Linear Regression", "Ridge Regression"],
+                ["Random Forest", "XGBoost", "Linear Regression", "Ridge Regression", "Elastic Net"],
                 help="Try Linear first as baseline (Dr. Pyrcz's advice)"
             )
         
@@ -853,6 +853,16 @@ elif page == "5. Model Training":
                 with col2:
                     st.info("Optuna will search:\n- n_estimators: 50-500\n- max_depth: 3-15\n- learning_rate: 0.01-0.3\n- subsample: 0.5-1.0\n- colsample: 0.5-1.0")
         
+        elif model_type == "Elastic Net":
+            tuning_mode = "Manual"
+            cv_folds = st.slider("Cross-Validation Folds", 3, 10, 5)
+            col1, col2 = st.columns(2)
+            with col1:
+                elastic_alpha = st.slider("Alpha (Regularization Strength)", 0.01, 100.0, 1.0, help="Higher = more regularization")
+            with col2:
+                l1_ratio = st.slider("L1 Ratio", 0.0, 1.0, 0.5, 0.1, help="0 = Ridge only, 1 = Lasso only, 0.5 = balanced")
+            st.info(f"L1 Ratio: {l1_ratio:.1f} → {int(l1_ratio*100)}% Lasso (feature selection) + {int((1-l1_ratio)*100)}% Ridge (shrinkage)")
+        
         else:
             tuning_mode = "Manual"
             cv_folds = st.slider("Cross-Validation Folds", 3, 10, 5)
@@ -884,7 +894,7 @@ elif page == "5. Model Training":
         
         if st.button("Train Model", type="primary"):
             from sklearn.preprocessing import StandardScaler
-            from sklearn.linear_model import LinearRegression, Ridge
+            from sklearn.linear_model import LinearRegression, Ridge, ElasticNet
             from sklearn.model_selection import cross_val_predict
             
             X = train_df[feature_cols].fillna(0)
@@ -997,6 +1007,9 @@ elif page == "5. Model Training":
             elif model_type == "Linear Regression":
                 model = LinearRegression()
                 st.info("Using Linear Regression (Dr. Pyrcz's baseline recommendation)")
+            elif model_type == "Elastic Net":
+                model = ElasticNet(alpha=elastic_alpha, l1_ratio=l1_ratio, random_state=42, max_iter=10000)
+                st.info(f"Using Elastic Net with alpha={elastic_alpha}, L1 ratio={l1_ratio}")
             else:
                 model = Ridge(alpha=alpha, random_state=42)
                 st.info(f"Using Ridge Regression with alpha={alpha}")
