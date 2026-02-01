@@ -19,3 +19,4 @@ shap
 mlxtend
 python-pptx
 scipy
+python-pptx
