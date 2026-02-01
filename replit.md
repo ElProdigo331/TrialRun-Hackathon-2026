@@ -82,6 +82,39 @@ Each well has ~21 rows (depth measurements Z=19-39). Must aggregate to one row p
 | SHAP values | ✅ Done | TreeExplainer + summary plots |
 | Train/Test split evaluation | ✅ Done | 80/20 split with separate metrics |
 | Uncertainty calibration check | ✅ Done | 5-fold CV with coverage analysis |
+| Stepwise feature selection | ✅ Done | Forward/Backward with mlxtend |
+| Bagging ensemble uncertainty | ✅ Done | sklearn BaggingRegressor (100 estimators) |
+
+---
+
+## Stepwise Feature Selection
+
+**Location:** Step 5 (Model Training) → Optional expander
+
+| Option | Description |
+|--------|-------------|
+| **Direction** | Forward (add best) or Backward (remove worst) |
+| **Target Features** | 3-30 features to select |
+| **CV Folds** | Cross-validation folds for scoring |
+
+Uses `mlxtend.feature_selection.SequentialFeatureSelector` with Ridge as base model. Selected features can be used for subsequent model training.
+
+---
+
+## Uncertainty Quantification Methods
+
+| Method | How R1-R100 are Generated |
+|--------|---------------------------|
+| **Residual Bootstrap** | prediction + random_historical_error |
+| **Bagging Ensemble** | Each of 100 estimators gives its own prediction |
+
+### Bagging Ensemble (New)
+Uses `sklearn.ensemble.BaggingRegressor`:
+- Creates 100 bootstrap samples of training data
+- Trains separate model on each sample
+- Each estimator's prediction = one realization
+- Reports OOB R² score for validation
+- Works with all model types (Linear, Ridge, Elastic Net, RF, XGBoost)
 
 ---
 
