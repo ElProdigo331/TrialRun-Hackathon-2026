@@ -58,7 +58,30 @@ Then open your browser to: **http://localhost:5000**
 | Feature Selection | Forward Stepwise | 105 → 10 optimal features |
 | Uncertainty | Bagging Ensemble (100) | Captures model uncertainty |
 
-## The 9-Step Workflow
+## Notebook Template (Official Format)
+
+Our `BrainOil.ipynb` follows the official hackathon template:
+
+### Executive Summary (4 Short Sentences)
+1. **The Problem:** Predict 3-year cumulative oil production for 12 preproduction wells (IDs 72-83) with uncertainty quantification.
+2. **Our Solution:** Ridge Regression (alpha=1.0) with MICE imputation, stepwise feature selection (105→10), and Bagging Ensemble for 100 uncertainty realizations.
+3. **What We Learned:** For small datasets (n=71), regularized linear models outperform complex tree-based ensembles; porosity (φ) is the primary production driver.
+4. **Recommendation:** Use domain-driven feature engineering with simple, interpretable models for subsurface prediction problems.
+
+### Workflow Goal
+Develop a reproducible machine learning workflow to predict cumulative 3-year oil production with uncertainty for 12 preproduction wells.
+
+### Workflow Steps
+1. **Data Loading** - Load well logs (71 train, 12 test) and 2D sand proportion map
+2. **MICE + CART Imputation** - Fill missing values at depth level before aggregation
+3. **Well-Level Aggregation** - Convert multi-row depth data to one row per well
+4. **Feature Engineering** - Create 105 features including RQI, FZI, spatial features
+5. **Feature Selection** - Correlation filter + Stepwise selection (105→10)
+6. **Model Training** - Ridge Regression with StandardScaler (alpha=1.0)
+7. **Uncertainty Quantification** - Bagging Ensemble (100 estimators)
+8. **Model Validation** - 5-fold CV, train/test split, benchmark comparison
+
+## The 9-Step Streamlit Workflow
 
 1. **Data Loading & MICE Imputation** - Load data, apply MICE+CART at depth level
 2. **Data Quality Verification** - Check imputation results

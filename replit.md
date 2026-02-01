@@ -17,6 +17,29 @@ Ask before making major changes.
 - **Sand Map:** Smooth 3x3
 - **Uncertainty:** Bagging Ensemble (100 estimators)
 
+## Official Hackathon Template Format
+
+### Notebook (BrainOil.ipynb)
+Must follow this exact structure:
+1. **Title:** "Energy A.I. Hackathon 2026 Workflow - [Team Name]"
+2. **Authors:** Names, Department, University
+3. **Executive Summary:** 4 short sentences answering:
+   - What is the problem?
+   - What did your team do to address the problem?
+   - What did your team learn?
+   - What does your team recommend going forward?
+4. **Workflow Goal:** 1-2 sentences
+5. **Workflow Steps:** Enumerated list with short descriptions
+
+### Presentation (Brain_Oil.pptx)
+6 slides per official template:
+- Slide 1: Title + Team Names
+- Slide 2: Executive Summary (4 questions)
+- Slide 3: Workflow Overview
+- Slide 4: Key Decisions
+- Slide 5: Results
+- Slide 6: Feedback/Recommendations
+
 ## Domain Knowledge
 
 ### Why Phi (Porosity) is Most Important
