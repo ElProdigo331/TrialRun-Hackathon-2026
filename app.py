@@ -1315,9 +1315,10 @@ elif page == "5. Model Training":
             elif model_type == "Ridge Regression" and hasattr(model, 'alpha'):
                 experiment_data['alpha'] = model.alpha
             
+            best_exp, improvement = compare_to_best(experiment_data, 'test_r2')
+            
             exp_id = save_experiment_result(experiment_data)
             
-            best_exp, improvement = compare_to_best(experiment_data, 'test_r2')
             if best_exp:
                 if improvement > 0:
                     st.success(f"🏆 **NEW BEST!** Test R² improved by {improvement:.4f} vs previous best (Experiment #{best_exp['id']})")
@@ -1325,6 +1326,8 @@ elif page == "5. Model Training":
                     st.info(f"📊 Tied with best result (Experiment #{best_exp['id']})")
                 else:
                     st.info(f"📊 Experiment #{exp_id} saved. Current best: #{best_exp['id']} with Test R² = {best_exp['test_r2']:.4f} ({-improvement:.4f} better)")
+            else:
+                st.success(f"🎉 First experiment recorded! (Experiment #{exp_id})")
             
             if hasattr(model, 'feature_importances_'):
                 st.subheader("Feature Importance")
@@ -1992,22 +1995,31 @@ elif page == "8. Experiment Leaderboard":
         with st.expander("🔍 Best Configuration Recommendations"):
             if history:
                 best = max(history, key=lambda x: x.get('test_r2', 0))
-                st.markdown(f"""
-                **Based on {len(history)} experiments, here's what works best for this dataset:**
                 
-                | Setting | Recommended Value |
-                |---------|-------------------|
-                | **Model Type** | {best.get('model_type', 'N/A')} |
-                | **Normalize Features** | {'Yes' if best.get('normalize_features') else 'No'} |
-                | **Sand Map Handling** | {best.get('sand_map_option', 'N/A')} |
-                | **Best Test R²** | {best.get('test_r2', 0):.4f} |
-                | **Best CV R²** | {best.get('cv_r2_mean', 0):.4f} |
-                """)
+                table_rows = [
+                    f"| **Model Type** | {best.get('model_type', 'N/A')} |",
+                    f"| **Normalize Features** | {'Yes' if best.get('normalize_features') else 'No'} |",
+                    f"| **Sand Map Handling** | {best.get('sand_map_option', 'N/A')} |",
+                    f"| **Best Test R²** | {best.get('test_r2', 0):.4f} |",
+                    f"| **Best CV R²** | {best.get('cv_r2_mean', 0):.4f} |"
+                ]
                 
                 if best.get('n_estimators'):
-                    st.markdown(f"| **n_estimators** | {best.get('n_estimators')} |")
+                    table_rows.append(f"| **n_estimators** | {best.get('n_estimators')} |")
                 if best.get('max_depth'):
-                    st.markdown(f"| **max_depth** | {best.get('max_depth')} |")
+                    table_rows.append(f"| **max_depth** | {best.get('max_depth')} |")
+                if best.get('alpha'):
+                    table_rows.append(f"| **alpha** | {best.get('alpha')} |")
+                
+                table_content = "\n".join(table_rows)
+                
+                st.markdown(f"""
+**Based on {len(history)} experiments, here's what works best for this dataset:**
+
+| Setting | Recommended Value |
+|---------|-------------------|
+{table_content}
+""")
         
         col1, col2 = st.columns(2)
         with col1:
