@@ -17,3 +17,5 @@ markdown
 xgboost
 shap
 mlxtend
+python-pptx
+scipy
