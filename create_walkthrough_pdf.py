@@ -491,7 +491,7 @@ def create_walkthrough_pdf():
     config_data = [
         ['Setting', 'Value'],
         ['Model', 'Ridge Regression'],
-        ['Alpha', '0.1'],
+        ['Alpha', '1.0'],
         ['Normalization', 'StandardScaler (CRITICAL)'],
         ['Sand Map', 'Smooth 3x3'],
         ['Feature Selection', 'Stepwise (105 → 10)'],

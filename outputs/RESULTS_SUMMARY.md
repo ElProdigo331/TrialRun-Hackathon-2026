@@ -38,7 +38,7 @@
 | Parameter | Value | Justification |
 |-----------|-------|---------------|
 | Model Type | Ridge Regression | Best for small n (Hastie et al. 2009) |
-| Alpha | 0.1 | Data-driven from benchmarks |
+| Alpha | 1.0 | Data-driven from benchmarks |
 | Normalization | StandardScaler | Required for penalized regression |
 | CV Folds | 5 | Standard for n=71 |
 

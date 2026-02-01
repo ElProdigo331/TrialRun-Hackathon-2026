@@ -52,7 +52,7 @@ Then open your browser to: **http://localhost:5000**
 | Setting | Value | Justification |
 |---------|-------|---------------|
 | Model | Ridge Regression | Best for n=71 (Hastie et al. 2009) |
-| Alpha | 0.1 | Data-driven from benchmarks |
+| Alpha | 1.0 | Data-driven from benchmarks |
 | Normalization | StandardScaler | CRITICAL for penalized regression |
 | Sand Map | Smooth (3x3) | Reduces noise, preserves trends |
 | Feature Selection | Forward Stepwise | 105 → 10 optimal features |
