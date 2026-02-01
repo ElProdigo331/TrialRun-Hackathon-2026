@@ -77,9 +77,11 @@ Streamlit interface with 9 navigation steps:
 - `app.py` — Main Streamlit application
 - `experiment_history.py` — Experiment tracking module
 - `create_presentation.py` — Automated PowerPoint generation
+- `create_walkthrough_pdf.py` — Presenter's walkthrough PDF generator
 - `run_benchmarks.py` — Model benchmarking script
 - `notebooks/BrainOil.ipynb` — Jupyter notebook submission
 - `Brain_Oil.pptx` — Presentation (14 slides)
+- `Presentation_Walkthrough.pdf` — Presenter's guide (8 pages)
 - `solution.csv` — Final predictions
 
 ## Academic References

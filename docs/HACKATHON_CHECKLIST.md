@@ -140,6 +140,7 @@ Wells: 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83
 | solution.csv | /solution.csv | ✅ Ready |
 | BrainOil.ipynb | /notebooks/BrainOil.ipynb | ✅ Ready |
 | Brain_Oil.pptx | /Brain_Oil.pptx | ✅ Ready |
+| Presentation_Walkthrough.pdf | /Presentation_Walkthrough.pdf | ✅ Ready |
 | README.md | /README.md | ✅ Ready |
 
 ---
