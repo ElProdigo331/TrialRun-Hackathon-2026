@@ -20,3 +20,4 @@ mlxtend
 python-pptx
 scipy
 python-pptx
+reportlab
