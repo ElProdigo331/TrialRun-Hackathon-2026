@@ -1,0 +1,147 @@
+{
+  "timestamp": "2026-02-01T07:16:31.063967",
+  "n_wells": 71,
+  "target_mean_bbl": 58535237.64788733,
+  "target_std_bbl": 23126878.591047894,
+  "configs_tested": 17,
+  "top_5": [
+    {
+      "rank": 1,
+      "model": "RandomForest",
+      "sand": "smooth_3x3",
+      "normalize": false,
+      "params": {
+        "n_estimators": 100,
+        "max_depth": 8
+      },
+      "cv_r2": 0.4157,
+      "cv_r2_std": 0.244,
+      "test_r2": 0.7338,
+      "rmse_pct": 23.6
+    },
+    {
+      "rank": 2,
+      "model": "RandomForest",
+      "sand": "smooth_3x3",
+      "normalize": true,
+      "params": {
+        "n_estimators": 150,
+        "max_depth": 10
+      },
+      "cv_r2": 0.4079,
+      "cv_r2_std": 0.2638,
+      "test_r2": 0.7395,
+      "rmse_pct": 23.4
+    },
+    {
+      "rank": 3,
+      "model": "RandomForest",
+      "sand": "exclude",
+      "normalize": true,
+      "params": {
+        "n_estimators": 100,
+        "max_depth": 8
+      },
+      "cv_r2": 0.4038,
+      "cv_r2_std": 0.2561,
+      "test_r2": 0.732,
+      "rmse_pct": 23.7
+    },
+    {
+      "rank": 4,
+      "model": "RandomForest",
+      "sand": "smooth_3x3",
+      "normalize": true,
+      "params": {
+        "n_estimators": 100,
+        "max_depth": 8
+      },
+      "cv_r2": 0.4038,
+      "cv_r2_std": 0.2561,
+      "test_r2": 0.732,
+      "rmse_pct": 23.7
+    },
+    {
+      "rank": 5,
+      "model": "RandomForest",
+      "sand": "include",
+      "normalize": true,
+      "params": {
+        "n_estimators": 100,
+        "max_depth": 8
+      },
+      "cv_r2": 0.4038,
+      "cv_r2_std": 0.2561,
+      "test_r2": 0.732,
+      "rmse_pct": 23.7
+    }
+  ],
+  "best_by_model": {
+    "RandomForest": {
+      "sand": "smooth_3x3",
+      "normalize": false,
+      "params": {
+        "n_estimators": 100,
+        "max_depth": 8
+      },
+      "cv_r2": 0.4157,
+      "test_r2": 0.7338,
+      "rmse_pct": 23.6
+    },
+    "XGBoost": {
+      "sand": "include",
+      "normalize": true,
+      "params": {
+        "n_estimators": 100,
+        "max_depth": 5,
+        "learning_rate": 0.1
+      },
+      "cv_r2": 0.3644,
+      "test_r2": 0.7248,
+      "rmse_pct": 24.0
+    },
+    "Ridge": {
+      "sand": "smooth_3x3",
+      "normalize": true,
+      "params": {
+        "alpha": 10.0
+      },
+      "cv_r2": 0.2192,
+      "test_r2": 0.7033,
+      "rmse_pct": 25.0
+    },
+    "ElasticNet": {
+      "sand": "smooth_3x3",
+      "normalize": true,
+      "params": {
+        "alpha": 1.0,
+        "l1_ratio": 0.5
+      },
+      "cv_r2": 0.2183,
+      "test_r2": 0.6485,
+      "rmse_pct": 27.2
+    }
+  },
+  "recommendations": {
+    "best_overall": {
+      "model": "RandomForest",
+      "sand": "smooth_3x3",
+      "normalize": false,
+      "params": {
+        "n_estimators": 100,
+        "max_depth": 8
+      },
+      "expected_cv_r2": 0.4157,
+      "expected_test_r2": 0.7338,
+      "expected_rmse_pct": 23.6
+    },
+    "quick_start": "RandomForest with n_estimators=100, max_depth=8, normalize=True, sand=smooth_3x3",
+    "for_accuracy": "RandomForest with {'n_estimators': 100, 'max_depth': 8}",
+    "industry_context": {
+      "excellent_threshold_r2": 0.93,
+      "good_threshold_r2": 0.85,
+      "excellent_rmse_pct": 10,
+      "good_rmse_pct": 15
+    }
+  }
+}

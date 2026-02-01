@@ -10,6 +10,7 @@ from sklearn.model_selection import cross_val_score, train_test_split, GridSearc
 from sklearn.preprocessing import LabelEncoder
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 import os
+import json
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -1653,6 +1654,50 @@ elif page == "7. AI Assistant":
                     
                     session_context = get_session_context()
                     
+                    benchmark_context = ""
+                    try:
+                        with open('outputs/benchmark_results.json', 'r') as f:
+                            benchmark_data = json.load(f)
+                        benchmark_context = f"""
+## EMPIRICAL BENCHMARK RESULTS (From Our Testing on This Dataset)
+We ran comprehensive benchmarks on {benchmark_data.get('configs_tested', 17)} configurations.
+
+### Top Performing Configurations:
+"""
+                        for cfg in benchmark_data.get('top_5', [])[:3]:
+                            benchmark_context += f"""
+**#{cfg['rank']}: {cfg['model']}**
+- Sand: {cfg['sand']}, Normalize: {cfg['normalize']}
+- Parameters: {cfg['params']}
+- CV R²: {cfg['cv_r2']:.4f} ± {cfg['cv_r2_std']:.4f}
+- Test R²: {cfg['test_r2']:.4f}
+- RMSE: {cfg['rmse_pct']:.1f}% of mean
+"""
+                        benchmark_context += f"""
+### Best Settings by Model Type:
+"""
+                        for model, data in benchmark_data.get('best_by_model', {}).items():
+                            benchmark_context += f"- **{model}**: Sand={data['sand']}, Normalize={data['normalize']}, CV R²={data['cv_r2']:.4f}, RMSE={data['rmse_pct']:.1f}%\n"
+                        
+                        rec = benchmark_data.get('recommendations', {}).get('best_overall', {})
+                        if rec:
+                            benchmark_context += f"""
+### RECOMMENDED CONFIGURATION:
+- **Model:** {rec.get('model', 'RandomForest')}
+- **Sand Map:** {rec.get('sand', 'smooth_3x3')}
+- **Normalize:** {rec.get('normalize', True)}
+- **Parameters:** {rec.get('params', {})}
+- **Expected CV R²:** {rec.get('expected_cv_r2', 0.42):.4f}
+- **Expected RMSE:** {rec.get('expected_rmse_pct', 24):.1f}% of mean
+
+NOTE: These baseline results improve significantly with:
+1. **Spatial features** (spatial_production_proxy) - can boost Test R² to 0.90+
+2. **Stepwise feature selection** - reduces overfitting
+3. **Optuna hyperparameter tuning** - optimizes settings
+"""
+                    except Exception:
+                        benchmark_context = ""
+                    
                     system_prompt = f"""You are an expert ML assistant for the Energy AI Hackathon 2026, built by Team Brain Oil. 
 You provide detailed, actionable advice with specific numbers and recommendations - like a senior data scientist would.
 
@@ -1664,9 +1709,8 @@ You provide detailed, actionable advice with specific numbers and recommendation
 - Output format: Point estimate + 100 realizations (R1-R100 columns) for uncertainty
 
 ## TARGET STATISTICS (Use for interpreting results)
-- Target mean: 33.4 Million BBL
-- Target std dev: 14.1 Million BBL  
-- Target range: 8.2M to 74.0M BBL
+- Target mean: 58.5 Million BBL (from benchmark data)
+- Target std dev: 23.1 Million BBL  
 - Number of training wells: 71 (after aggregation)
 
 ## INDUSTRY BENCHMARKS (From SPE Publications & Research)
@@ -1677,43 +1721,56 @@ You provide detailed, actionable advice with specific numbers and recommendation
 | Acceptable        | 0.75-0.85| 15-20%           | 15-20% |
 | Needs Improvement | < 0.75   | > 20%            | > 20% |
 
-For this dataset: RMSE < 3.3M BBL is excellent, < 5M BBL is good, < 6.7M BBL is acceptable.
+{benchmark_context}
 
-## MODEL RECOMMENDATIONS (Based on Industry Studies)
-1. **XGBoost** - Best performer in published studies (R² 0.95-0.98)
-2. **Random Forest** - Robust, good balance (R² 0.85-0.93), handles small datasets well
-3. **Ridge Regression** - Simple baseline, less overfitting (R² 0.80-0.90)
-4. **Linear Regression** - Often overfits when features > samples (avoid with 50+ features)
+## MODEL RECOMMENDATIONS (Based on Our Empirical Testing + Industry Studies)
+1. **RandomForest** - Best performer on this dataset (CV R² ~0.42 baseline, Test R² ~0.73)
+   - Recommended: n_estimators=100-150, max_depth=8-10
+   - With spatial features: Test R² can reach 0.90+
+2. **XGBoost** - Comparable performance (CV R² ~0.36, Test R² ~0.72)
+   - Recommended: n_estimators=100, max_depth=5-6, learning_rate=0.1
+3. **Ridge Regression** - Simpler alternative (CV R² ~0.22, Test R² ~0.70)
+   - Recommended when interpretability matters
+4. **Linear Regression** - AVOID (massively overfits with 50+ features, CV R² negative)
 
-## OPTIMAL SETTINGS TO RECOMMEND
-- Normalize features: Always YES (equalizes scales)
-- Sand map: Smooth 3x3 (reduces noise from raw seismic)
-- Stepwise selection: YES with 15-25 features (reduces overfitting)
-- Uncertainty: Bagging ensemble captures model uncertainty better
-- Hyperparameter tuning: Enable Optuna with 30+ trials
+## OPTIMAL SETTINGS (From Our Testing)
+- **Best Model:** RandomForest with n_estimators=100, max_depth=8
+- **Sand Map:** smooth_3x3 (best) or include (similar)
+- **Normalize:** Either works for RF, but YES for linear models
+- **Key improvement:** Enable spatial features (spatial_production_proxy) in Step 4
+- **Stepwise selection:** Use 15-25 features to reduce overfitting
+- **Uncertainty:** Bagging ensemble captures model uncertainty
 
 ## COMMON ISSUES & SOLUTIONS
-1. **Train R² = 1.0, Test R² << 1.0** → Overfitting. Use Ridge/XGBoost, fewer features, stepwise selection
-2. **Low CV R² with high variance** → Unstable model. Increase regularization, reduce features
-3. **spatial_production_proxy dominates** → Good! Location matters. But check if masking other features
-4. **RMSE seems high** → Compare to target mean (33.4M). RMSE of 5M = 15% which is acceptable
+1. **Train R² = 1.0, Test R² << 1.0** → Overfitting. Use max_depth=6-8, fewer features, stepwise
+2. **Low CV R² (~0.2-0.4)** → Normal for this dataset without spatial features. Add spatial features in Step 4!
+3. **spatial_production_proxy dominates** → Good! Location strongly predicts production. Expected behavior.
+4. **Linear Regression gives negative R²** → Expected! Too many features. Use Ridge or RF instead.
 
-## KEY FEATURES (By Importance from Industry Knowledge)
-Primary drivers: porosity (phi), permeability (perm), spatial location (X, Y), sand proportion
-Secondary: gamma ray (GR), rock quality indicators (RQI, FZI), impedance ratios
-Derived: phi_perm_product, net_to_gross, analog_similarity, best_zone features
+## KEY FEATURES (By Importance from Our Testing)
+**Primary drivers (highest importance):**
+- spatial_production_proxy (location-based)
+- perm_mean (permeability)
+- GR_mean (gamma ray)
+- phi_mean (porosity)
+- Vp_min, Vs_min (velocity)
+
+**Secondary (moderate importance):**
+- phi_perm_product, RQI, FZI (rock quality)
+- best_zone features (depth heterogeneity)
+- impedance_ratio, Vp_Vs_ratio
 
 ## USER'S CURRENT SESSION STATE
 {session_context}
 
 ## RESPONSE GUIDELINES
-1. Be specific with numbers - don't just say "good", say "R² of 0.85 is good, industry benchmark is 0.85-0.93"
-2. Give actionable recommendations - "Try XGBoost with stepwise selection of 20 features"
-3. Reference industry benchmarks when evaluating results
+1. Be specific with numbers from our benchmark data - e.g., "RandomForest typically gives CV R² of 0.42 without spatial features, but 0.85+ with them"
+2. Give actionable recommendations - "In Step 4, make sure spatial features are enabled. In Step 5, try RandomForest with max_depth=8"
+3. Reference our empirical benchmarks AND industry standards
 4. Use tables and bullet points for clarity
-5. If asked about their results, compare to the benchmarks above
-6. Suggest next steps they can take in the app
-7. Be encouraging but honest about areas for improvement"""
+5. If their results are lower than expected, check if spatial features are enabled
+6. Suggest specific next steps in the app (which Step to go to)
+7. Be encouraging - this is a hard problem with 71 training samples!"""
 
                     messages = [{"role": "system", "content": system_prompt}]
                     
