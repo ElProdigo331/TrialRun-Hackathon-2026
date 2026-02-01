@@ -33,6 +33,51 @@ st.markdown("**Predict 3-Year Cumulative Oil Production for 12 Preproduction Wel
 
 DATA_DIR = "data"
 OUTPUT_DIR = "outputs"
+EXPERIMENT_HISTORY_FILE = f"{OUTPUT_DIR}/experiment_history.json"
+
+def load_experiment_history():
+    """Load experiment history from JSON file."""
+    if os.path.exists(EXPERIMENT_HISTORY_FILE):
+        try:
+            with open(EXPERIMENT_HISTORY_FILE, 'r') as f:
+                return json.load(f)
+        except:
+            return []
+    return []
+
+def save_experiment_history(history):
+    """Save experiment history to JSON file."""
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    with open(EXPERIMENT_HISTORY_FILE, 'w') as f:
+        json.dump(history, f, indent=2)
+
+def save_experiment_result(experiment_data):
+    """Add a new experiment to history."""
+    history = load_experiment_history()
+    experiment_data['timestamp'] = pd.Timestamp.now().isoformat()
+    experiment_data['id'] = len(history) + 1
+    history.append(experiment_data)
+    save_experiment_history(history)
+    return experiment_data['id']
+
+def get_best_experiments(metric='test_r2', top_n=5):
+    """Get top N experiments by a specific metric."""
+    history = load_experiment_history()
+    if not history:
+        return []
+    sorted_history = sorted(history, key=lambda x: x.get(metric, 0), reverse=True)
+    return sorted_history[:top_n]
+
+def compare_to_best(current_metrics, metric='test_r2'):
+    """Compare current experiment to best historical result."""
+    history = load_experiment_history()
+    if not history:
+        return None, None
+    best = max(history, key=lambda x: x.get(metric, 0))
+    current_val = current_metrics.get(metric, 0)
+    best_val = best.get(metric, 0)
+    improvement = current_val - best_val
+    return best, improvement
 
 @st.cache_data
 def load_2026_data():
@@ -184,7 +229,8 @@ pages = [
     "5. Model Training",
     "6. Generate Solution",
     "7. AI Assistant",
-    "8. Scholarly Analysis"
+    "8. Experiment Leaderboard",
+    "9. Scholarly Analysis"
 ]
 
 page = sidebar.radio("Select Step:", pages)
@@ -1234,9 +1280,51 @@ elif page == "5. Model Training":
             col3.metric("Full Data MAE", f"{mae:,.0f} BBL")
             col4.metric("Full Data RMSE", f"{rmse:,.0f} BBL")
             
+            oob_score_val = None
             if hasattr(model, 'oob_score_') and model.oob_score:
-                st.metric("OOB R² Score", f"{model.oob_score_:.4f}")
+                oob_score_val = model.oob_score_
+                st.metric("OOB R² Score", f"{oob_score_val:.4f}")
                 st.info("OOB (Out-of-Bag) score provides an unbiased estimate of model performance using samples not used in each tree's training.")
+            
+            experiment_data = {
+                'experiment_name': experiment_name,
+                'model_type': model_type,
+                'normalize_features': normalize_features,
+                'sand_map_option': sand_map_option,
+                'train_r2': float(train_r2),
+                'test_r2': float(test_r2),
+                'train_mae': float(train_mae),
+                'test_mae': float(test_mae),
+                'train_rmse': float(train_rmse),
+                'test_rmse': float(test_rmse),
+                'cv_r2_mean': float(cv_scores.mean()),
+                'cv_r2_std': float(cv_scores.std()),
+                'full_data_mae': float(mae),
+                'full_data_rmse': float(rmse),
+                'oob_r2': float(oob_score_val) if oob_score_val else None,
+                'n_features': len(feature_cols),
+                'tuning_mode': tuning_mode if 'tuning_mode' in dir() else 'Manual'
+            }
+            
+            if model_type == "Random Forest" and hasattr(model, 'n_estimators'):
+                experiment_data['n_estimators'] = model.n_estimators
+                experiment_data['max_depth'] = model.max_depth
+            elif model_type == "XGBoost" and hasattr(model, 'n_estimators'):
+                experiment_data['n_estimators'] = model.n_estimators
+                experiment_data['max_depth'] = model.max_depth
+            elif model_type == "Ridge Regression" and hasattr(model, 'alpha'):
+                experiment_data['alpha'] = model.alpha
+            
+            exp_id = save_experiment_result(experiment_data)
+            
+            best_exp, improvement = compare_to_best(experiment_data, 'test_r2')
+            if best_exp:
+                if improvement > 0:
+                    st.success(f"🏆 **NEW BEST!** Test R² improved by {improvement:.4f} vs previous best (Experiment #{best_exp['id']})")
+                elif improvement == 0:
+                    st.info(f"📊 Tied with best result (Experiment #{best_exp['id']})")
+                else:
+                    st.info(f"📊 Experiment #{exp_id} saved. Current best: #{best_exp['id']} with Test R² = {best_exp['test_r2']:.4f} ({-improvement:.4f} better)")
             
             if hasattr(model, 'feature_importances_'):
                 st.subheader("Feature Importance")
@@ -1800,7 +1888,142 @@ You provide detailed, actionable advice with specific numbers and recommendation
             st.session_state.chat_history = []
             st.rerun()
 
-elif page == "8. Scholarly Analysis":
+elif page == "8. Experiment Leaderboard":
+    st.header("📊 Experiment Leaderboard")
+    st.markdown("*Track all your experiments and see which configurations work best for this dataset*")
+    
+    history = load_experiment_history()
+    
+    if not history:
+        st.info("No experiments recorded yet. Train a model in Step 5 to start tracking experiments!")
+        st.markdown("""
+        **How it works:**
+        1. Every time you train a model, results are automatically saved
+        2. The system compares your new result to the best previous result
+        3. Over time, you'll see which model/parameter combinations work best
+        """)
+    else:
+        st.success(f"**{len(history)} experiments recorded**")
+        
+        col1, col2 = st.columns([2, 1])
+        
+        with col1:
+            st.subheader("🏆 Top 5 Experiments by Test R²")
+            top_5 = get_best_experiments('test_r2', 5)
+            
+            leaderboard_data = []
+            for i, exp in enumerate(top_5):
+                leaderboard_data.append({
+                    'Rank': f"#{i+1}",
+                    'Exp ID': exp.get('id', 'N/A'),
+                    'Model': exp.get('model_type', 'Unknown'),
+                    'Test R²': f"{exp.get('test_r2', 0):.4f}",
+                    'CV R²': f"{exp.get('cv_r2_mean', 0):.4f}",
+                    'Sand Map': exp.get('sand_map_option', 'N/A'),
+                    'Normalized': '✓' if exp.get('normalize_features') else '✗'
+                })
+            
+            if leaderboard_data:
+                st.dataframe(pd.DataFrame(leaderboard_data), use_container_width=True, hide_index=True)
+        
+        with col2:
+            st.subheader("📈 Quick Stats")
+            test_r2_values = [e.get('test_r2', 0) for e in history]
+            st.metric("Best Test R²", f"{max(test_r2_values):.4f}")
+            st.metric("Average Test R²", f"{np.mean(test_r2_values):.4f}")
+            st.metric("Total Experiments", len(history))
+        
+        st.divider()
+        
+        st.subheader("📋 Full Experiment History")
+        
+        history_df = pd.DataFrame(history)
+        display_cols = ['id', 'experiment_name', 'model_type', 'test_r2', 'cv_r2_mean', 
+                       'normalize_features', 'sand_map_option', 'timestamp']
+        available_cols = [c for c in display_cols if c in history_df.columns]
+        
+        if available_cols:
+            display_df = history_df[available_cols].copy()
+            display_df = display_df.sort_values('test_r2', ascending=False)
+            
+            for col in ['test_r2', 'cv_r2_mean']:
+                if col in display_df.columns:
+                    display_df[col] = display_df[col].apply(lambda x: f"{x:.4f}" if pd.notna(x) else "N/A")
+            
+            if 'timestamp' in display_df.columns:
+                display_df['timestamp'] = pd.to_datetime(display_df['timestamp']).dt.strftime('%Y-%m-%d %H:%M')
+            
+            st.dataframe(display_df, use_container_width=True, hide_index=True)
+        
+        st.divider()
+        
+        st.subheader("📊 Model Performance Comparison")
+        
+        model_stats = {}
+        for exp in history:
+            model = exp.get('model_type', 'Unknown')
+            if model not in model_stats:
+                model_stats[model] = {'test_r2_values': [], 'count': 0}
+            model_stats[model]['test_r2_values'].append(exp.get('test_r2', 0))
+            model_stats[model]['count'] += 1
+        
+        comparison_data = []
+        for model, stats in model_stats.items():
+            comparison_data.append({
+                'Model': model,
+                'Experiments': stats['count'],
+                'Best Test R²': max(stats['test_r2_values']),
+                'Avg Test R²': np.mean(stats['test_r2_values']),
+                'Worst Test R²': min(stats['test_r2_values'])
+            })
+        
+        if comparison_data:
+            comparison_df = pd.DataFrame(comparison_data).sort_values('Best Test R²', ascending=False)
+            st.dataframe(comparison_df, use_container_width=True, hide_index=True)
+            
+            fig = px.bar(comparison_df, x='Model', y='Best Test R²', 
+                        title="Best Test R² by Model Type",
+                        color='Best Test R²',
+                        color_continuous_scale='Viridis')
+            st.plotly_chart(fig, use_container_width=True)
+        
+        st.divider()
+        
+        with st.expander("🔍 Best Configuration Recommendations"):
+            if history:
+                best = max(history, key=lambda x: x.get('test_r2', 0))
+                st.markdown(f"""
+                **Based on {len(history)} experiments, here's what works best for this dataset:**
+                
+                | Setting | Recommended Value |
+                |---------|-------------------|
+                | **Model Type** | {best.get('model_type', 'N/A')} |
+                | **Normalize Features** | {'Yes' if best.get('normalize_features') else 'No'} |
+                | **Sand Map Handling** | {best.get('sand_map_option', 'N/A')} |
+                | **Best Test R²** | {best.get('test_r2', 0):.4f} |
+                | **Best CV R²** | {best.get('cv_r2_mean', 0):.4f} |
+                """)
+                
+                if best.get('n_estimators'):
+                    st.markdown(f"| **n_estimators** | {best.get('n_estimators')} |")
+                if best.get('max_depth'):
+                    st.markdown(f"| **max_depth** | {best.get('max_depth')} |")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            st.download_button(
+                "📥 Download Experiment History (JSON)",
+                data=json.dumps(history, indent=2),
+                file_name="experiment_history.json",
+                mime="application/json"
+            )
+        with col2:
+            if st.button("🗑️ Clear All Experiments", type="secondary"):
+                save_experiment_history([])
+                st.success("Experiment history cleared!")
+                st.rerun()
+
+elif page == "9. Scholarly Analysis":
     st.header("Scholarly Analysis: Research Backing for Our Workflow")
     
     st.markdown("""
