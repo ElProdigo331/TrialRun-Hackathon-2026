@@ -1581,15 +1581,60 @@ elif page == "7. AI Assistant":
     
     st.markdown("""
     Ask me anything about:
-    - The 2026 hackathon problem (oil production prediction)
-    - Feature engineering for petrophysical data
-    - Model selection and tuning
-    - Uncertainty quantification
-    - Adapting to different datasets
+    - **Best model/option combinations** for this problem
+    - **Industry benchmarks** - what are "good numbers"?
+    - **Feature engineering** for petrophysical data
+    - **Interpreting results** - is my model good enough?
+    - **Debugging** - why is my R² low or RMSE high?
+    - **Uncertainty quantification** methods
     """)
+    
+    with st.expander("💡 Suggested Questions", expanded=False):
+        st.markdown("""
+        **Getting Started:**
+        - "What's the best model to start with?"
+        - "Which features matter most for oil production?"
+        
+        **Interpreting Results:**
+        - "Is my R² of 0.85 good enough?"
+        - "My RMSE is 5M BBL - is that acceptable?"
+        - "Why is my training R² much higher than test R²?"
+        
+        **Optimization:**
+        - "How can I improve my model's accuracy?"
+        - "Should I use stepwise feature selection?"
+        - "Which uncertainty method is better - residual bootstrap or bagging?"
+        
+        **Industry Context:**
+        - "What do industry experts look for in production prediction?"
+        - "How does my model compare to published SPE studies?"
+        """)
     
     if 'chat_history' not in st.session_state:
         st.session_state.chat_history = []
+    
+    def get_session_context():
+        """Gather current session state for context-aware responses"""
+        context_parts = []
+        
+        if 'trained_model' in st.session_state:
+            context_parts.append(f"Current model type: {st.session_state.get('model_type', 'Unknown')}")
+        
+        if 'cv_scores' in st.session_state:
+            scores = st.session_state['cv_scores']
+            context_parts.append(f"Latest CV R² scores: mean={np.mean(scores):.4f}, std={np.std(scores):.4f}")
+        
+        if 'best_params' in st.session_state:
+            context_parts.append(f"Best hyperparameters: {st.session_state['best_params']}")
+        
+        if 'feature_importances' in st.session_state:
+            top_features = list(st.session_state['feature_importances'].items())[:5]
+            context_parts.append(f"Top 5 features: {top_features}")
+        
+        if 'experiment_name' in st.session_state:
+            context_parts.append(f"Current experiment: {st.session_state['experiment_name']}")
+            
+        return "\n".join(context_parts) if context_parts else "No model trained yet in this session."
     
     for message in st.session_state.chat_history:
         with st.chat_message(message["role"]):
@@ -1606,31 +1651,82 @@ elif page == "7. AI Assistant":
                 try:
                     client = get_openai_client()
                     
-                    system_prompt = """You are an expert ML assistant for the Energy AI Hackathon 2026, built by Team Brain Oil.
+                    session_context = get_session_context()
+                    
+                    system_prompt = f"""You are an expert ML assistant for the Energy AI Hackathon 2026, built by Team Brain Oil. 
+You provide detailed, actionable advice with specific numbers and recommendations - like a senior data scientist would.
 
-The 2026 hackathon problem is:
-- Predict 3-year cumulative oil production (BBL) for 12 preproduction wells
+## HACKATHON PROBLEM (2026)
+- Predict 3-year cumulative oil production (BBL) for 12 preproduction wells (Well IDs 72-83)
 - Training data: 71 wells with petrophysical well logs (multiple depth measurements per well)
-- Features: porosity (phi), permeability (perm), gamma ray (GR), acoustic impedance (AI), facies, etc.
-- Must aggregate depth measurements per well (mean, std, min, max)
-- Output: Point estimate + 100 realizations (R1-R100) for uncertainty
+- Features: porosity (phi), permeability (perm), gamma ray (GR), acoustic/shear impedance (AI/SI), facies, spatial coordinates (X,Y), sand proportion
+- Must aggregate depth measurements per well (mean, std, min, max of each feature)
+- Output format: Point estimate + 100 realizations (R1-R100 columns) for uncertainty
 
-Key techniques being used:
-- MICE imputation for missing values (recommended by hackathon host)
-- Optuna for hyperparameter tuning
-- Random Forest regression
-- Residual bootstrapping for uncertainty quantification
-- Shapley values for feature importance (from workshop)
+## TARGET STATISTICS (Use for interpreting results)
+- Target mean: 33.4 Million BBL
+- Target std dev: 14.1 Million BBL  
+- Target range: 8.2M to 74.0M BBL
+- Number of training wells: 71 (after aggregation)
 
-Provide helpful, practical advice for winning the hackathon."""
+## INDUSTRY BENCHMARKS (From SPE Publications & Research)
+| Performance Level | R² Range | RMSE (% of mean) | MAPE |
+|-------------------|----------|------------------|------|
+| Excellent         | ≥ 0.93   | < 10%            | < 10% |
+| Good              | 0.85-0.93| 10-15%           | 10-15% |
+| Acceptable        | 0.75-0.85| 15-20%           | 15-20% |
+| Needs Improvement | < 0.75   | > 20%            | > 20% |
 
+For this dataset: RMSE < 3.3M BBL is excellent, < 5M BBL is good, < 6.7M BBL is acceptable.
+
+## MODEL RECOMMENDATIONS (Based on Industry Studies)
+1. **XGBoost** - Best performer in published studies (R² 0.95-0.98)
+2. **Random Forest** - Robust, good balance (R² 0.85-0.93), handles small datasets well
+3. **Ridge Regression** - Simple baseline, less overfitting (R² 0.80-0.90)
+4. **Linear Regression** - Often overfits when features > samples (avoid with 50+ features)
+
+## OPTIMAL SETTINGS TO RECOMMEND
+- Normalize features: Always YES (equalizes scales)
+- Sand map: Smooth 3x3 (reduces noise from raw seismic)
+- Stepwise selection: YES with 15-25 features (reduces overfitting)
+- Uncertainty: Bagging ensemble captures model uncertainty better
+- Hyperparameter tuning: Enable Optuna with 30+ trials
+
+## COMMON ISSUES & SOLUTIONS
+1. **Train R² = 1.0, Test R² << 1.0** → Overfitting. Use Ridge/XGBoost, fewer features, stepwise selection
+2. **Low CV R² with high variance** → Unstable model. Increase regularization, reduce features
+3. **spatial_production_proxy dominates** → Good! Location matters. But check if masking other features
+4. **RMSE seems high** → Compare to target mean (33.4M). RMSE of 5M = 15% which is acceptable
+
+## KEY FEATURES (By Importance from Industry Knowledge)
+Primary drivers: porosity (phi), permeability (perm), spatial location (X, Y), sand proportion
+Secondary: gamma ray (GR), rock quality indicators (RQI, FZI), impedance ratios
+Derived: phi_perm_product, net_to_gross, analog_similarity, best_zone features
+
+## USER'S CURRENT SESSION STATE
+{session_context}
+
+## RESPONSE GUIDELINES
+1. Be specific with numbers - don't just say "good", say "R² of 0.85 is good, industry benchmark is 0.85-0.93"
+2. Give actionable recommendations - "Try XGBoost with stepwise selection of 20 features"
+3. Reference industry benchmarks when evaluating results
+4. Use tables and bullet points for clarity
+5. If asked about their results, compare to the benchmarks above
+6. Suggest next steps they can take in the app
+7. Be encouraging but honest about areas for improvement"""
+
+                    messages = [{"role": "system", "content": system_prompt}]
+                    
+                    for msg in st.session_state.chat_history[-10:]:
+                        messages.append({"role": msg["role"], "content": msg["content"]})
+                    
+                    messages.append({"role": "user", "content": prompt})
+                    
                     response = client.chat.completions.create(
                         model="gpt-4o-mini",
-                        messages=[
-                            {"role": "system", "content": system_prompt},
-                            {"role": "user", "content": prompt}
-                        ],
-                        max_tokens=1000
+                        messages=messages,
+                        max_tokens=1500,
+                        temperature=0.7
                     )
                     
                     assistant_response = response.choices[0].message.content
@@ -1640,6 +1736,12 @@ Provide helpful, practical advice for winning the hackathon."""
                 except Exception as e:
                     error_msg = f"Error: {str(e)}"
                     st.error(error_msg)
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("🗑️ Clear Chat History"):
+            st.session_state.chat_history = []
+            st.rerun()
 
 elif page == "8. Scholarly Analysis":
     st.header("Scholarly Analysis: Research Backing for Our Workflow")
