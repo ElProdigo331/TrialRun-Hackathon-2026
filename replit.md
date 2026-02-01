@@ -80,7 +80,7 @@ Streamlit interface with 9 navigation steps:
 - `create_walkthrough_pdf.py` — Presenter's walkthrough PDF generator
 - `run_benchmarks.py` — Model benchmarking script
 - `notebooks/BrainOil.ipynb` — Jupyter notebook submission
-- `Brain_Oil.pptx` — Presentation (15 slides)
+- `Brain_Oil.pptx` — Presentation (6 slides, official template)
 - `Presentation_Walkthrough.pdf` — Presenter's guide (8 pages)
 - `solution.csv` — Final predictions
 

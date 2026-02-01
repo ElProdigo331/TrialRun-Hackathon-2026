@@ -207,8 +207,8 @@ For each numerical feature, we calculate per well:
 ## Reproducibility
 
 ### Presentation
-- **Brain_Oil.pptx** - 15 slides including Sand Heat Map visualization
-- **Presentation_Walkthrough.pdf** - 8-page presenter's guide
+- **Brain_Oil.pptx** - 6 slides (official hackathon template format)
+- **Presentation_Walkthrough.pdf** - Presenter's guide with Q&A section
 
 ### Code Files
 - `app.py` - Full Streamlit application with enhanced AI Assistant

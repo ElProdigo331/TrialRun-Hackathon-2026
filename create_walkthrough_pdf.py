@@ -1,11 +1,16 @@
+"""
+Generate Presentation_Walkthrough.pdf for Energy AI Hackathon 2026.
+A presenter's guide matching the official 6-slide template format.
+"""
+
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
-from reportlab.lib.colors import HexColor, black, white
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak, KeepTogether
-from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_JUSTIFY
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak
+from reportlab.lib.colors import HexColor, white
 
 def create_walkthrough_pdf():
+    """Create the presenter's walkthrough PDF."""
     doc = SimpleDocTemplate(
         "Presentation_Walkthrough.pdf",
         pagesize=letter,
@@ -19,103 +24,90 @@ def create_walkthrough_pdf():
     
     title_style = ParagraphStyle(
         'CustomTitle',
-        parent=styles['Title'],
+        parent=styles['Heading1'],
         fontSize=24,
-        spaceAfter=6,
-        textColor=HexColor('#1a5276'),
-        alignment=TA_CENTER
+        textColor=HexColor('#2c3e50'),
+        alignment=1,
+        spaceAfter=12
     )
     
     subtitle_style = ParagraphStyle(
-        'Subtitle',
+        'CustomSubtitle',
         parent=styles['Normal'],
         fontSize=14,
-        spaceAfter=20,
-        textColor=HexColor('#566573'),
-        alignment=TA_CENTER
-    )
-    
-    team_style = ParagraphStyle(
-        'Team',
-        parent=styles['Normal'],
-        fontSize=12,
-        spaceBefore=10,
-        spaceAfter=30,
-        textColor=HexColor('#2c3e50'),
-        alignment=TA_CENTER,
-        leading=18
+        textColor=HexColor('#7f8c8d'),
+        alignment=1,
+        spaceAfter=6
     )
     
     section_style = ParagraphStyle(
-        'Section',
-        parent=styles['Heading1'],
-        fontSize=16,
-        spaceBefore=20,
-        spaceAfter=10,
-        textColor=HexColor('#1a5276'),
+        'SectionHeader',
+        parent=styles['Heading2'],
+        fontSize=18,
+        textColor=HexColor('#2874a6'),
+        spaceBefore=16,
+        spaceAfter=8,
         borderPadding=5
     )
     
     subsection_style = ParagraphStyle(
-        'Subsection',
-        parent=styles['Heading2'],
-        fontSize=13,
+        'SubsectionHeader',
+        parent=styles['Heading3'],
+        fontSize=14,
+        textColor=HexColor('#1a5276'),
         spaceBefore=12,
-        spaceAfter=6,
-        textColor=HexColor('#2874a6')
+        spaceAfter=6
     )
     
     body_style = ParagraphStyle(
-        'CustomBody',
+        'BodyText',
         parent=styles['Normal'],
         fontSize=11,
+        textColor=HexColor('#2c3e50'),
         spaceAfter=8,
-        alignment=TA_JUSTIFY,
-        leading=16
-    )
-    
-    bullet_style = ParagraphStyle(
-        'Bullet',
-        parent=styles['Normal'],
-        fontSize=11,
-        leftIndent=20,
-        spaceAfter=4,
-        leading=15
+        leading=14
     )
     
     talking_point_style = ParagraphStyle(
         'TalkingPoint',
         parent=styles['Normal'],
         fontSize=11,
-        leftIndent=25,
-        spaceAfter=3,
         textColor=HexColor('#27ae60'),
+        leftIndent=20,
+        spaceAfter=6,
         leading=14
     )
     
-    quote_style = ParagraphStyle(
-        'Quote',
+    bullet_style = ParagraphStyle(
+        'Bullet',
         parent=styles['Normal'],
-        fontSize=10,
+        fontSize=11,
+        textColor=HexColor('#2c3e50'),
         leftIndent=30,
-        rightIndent=30,
-        spaceAfter=10,
-        spaceBefore=10,
-        textColor=HexColor('#7f8c8d'),
-        alignment=TA_CENTER,
-        fontName='Helvetica-Oblique',
-        leading=14
+        spaceAfter=4,
+        leading=13
     )
     
     highlight_style = ParagraphStyle(
         'Highlight',
         parent=styles['Normal'],
-        fontSize=12,
-        spaceBefore=10,
-        spaceAfter=10,
+        fontSize=11,
         textColor=HexColor('#c0392b'),
-        alignment=TA_CENTER,
-        fontName='Helvetica-Bold'
+        backColor=HexColor('#fdebd0'),
+        leftIndent=10,
+        rightIndent=10,
+        spaceBefore=8,
+        spaceAfter=8,
+        borderPadding=8
+    )
+    
+    team_style = ParagraphStyle(
+        'TeamStyle',
+        parent=styles['Normal'],
+        fontSize=12,
+        textColor=HexColor('#2c3e50'),
+        alignment=1,
+        spaceAfter=4
     )
     
     story = []
@@ -128,21 +120,21 @@ def create_walkthrough_pdf():
     story.append(Spacer(1, 30))
     
     story.append(Paragraph("<b>Team Brain Oil</b>", team_style))
-    story.append(Paragraph("Kailasadatta Boggaram<br/>Jayanth Damodaran<br/>Bilal Shihab<br/>Carlos Fabela", team_style))
-    story.append(Spacer(1, 20))
+    story.append(Paragraph("Kailasadatta Boggaram | Jayanth Damodaran | Bilal Shihab | Carlos Fabela", team_style))
+    story.append(Spacer(1, 10))
     story.append(Paragraph("The University of Texas at Austin", 
                           ParagraphStyle('Uni', parent=team_style, fontSize=11, textColor=HexColor('#7f8c8d'))))
     story.append(Spacer(1, 30))
     
-    story.append(Paragraph("<b>February 1, 2026</b>", 
+    story.append(Paragraph("<b>January 25, 2026</b>", 
                           ParagraphStyle('Date', parent=team_style, fontSize=12)))
     
     story.append(PageBreak())
     
     story.append(Paragraph("HOW TO USE THIS GUIDE", section_style))
     story.append(Paragraph(
-        "This walkthrough is designed to help you present our project confidently. Each section corresponds to slides "
-        "in the PowerPoint and cells in the Jupyter notebook. Use it as your speaking notes during the presentation.",
+        "This walkthrough follows the official 6-slide hackathon template. Each section corresponds to one slide. "
+        "Use this as your speaking notes. You have less than 5 minutes to present.",
         body_style
     ))
     story.append(Spacer(1, 10))
@@ -150,9 +142,8 @@ def create_walkthrough_pdf():
     guide_data = [
         ['Symbol', 'Meaning'],
         ['SAY:', 'What to say out loud to the audience'],
-        ['SHOW:', 'What to point to or demonstrate'],
-        ['KEY POINT:', 'The main takeaway for that section'],
-        ['TRANSITION:', 'How to smoothly move to the next topic']
+        ['SHOW:', 'What to point to or emphasize'],
+        ['KEY POINT:', 'The main takeaway for that slide']
     ]
     guide_table = Table(guide_data, colWidths=[1.5*inch, 5*inch])
     guide_table.setStyle(TableStyle([
@@ -162,26 +153,25 @@ def create_walkthrough_pdf():
         ('FONTSIZE', (0, 0), (-1, -1), 10),
         ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
         ('GRID', (0, 0), (-1, -1), 0.5, HexColor('#bdc3c7')),
-        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         ('BACKGROUND', (0, 1), (-1, -1), HexColor('#f8f9fa')),
         ('LEFTPADDING', (0, 0), (-1, -1), 10),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 10),
         ('TOPPADDING', (0, 0), (-1, -1), 8),
         ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
     ]))
     story.append(guide_table)
     story.append(Spacer(1, 20))
     
-    story.append(Paragraph("PRESENTATION TIMELINE (10 minutes)", subsection_style))
+    story.append(Paragraph("PRESENTATION TIMELINE (~5 minutes)", subsection_style))
     timeline_data = [
-        ['Section', 'Time', 'Slides'],
-        ['Introduction & Problem', '1 min', '1-2'],
-        ['Data & Methodology', '3 min', '3-7'],
-        ['Results & Why Ridge Won', '3 min', '8-11'],
-        ['Predictions & Uncertainty', '2 min', '12-13'],
-        ['Conclusion & Q&A', '1 min', '14-15']
+        ['Slide', 'Topic', 'Time'],
+        ['1', 'Title & Team Introduction', '15 sec'],
+        ['2', 'Executive Summary (4 questions)', '1 min'],
+        ['3', 'Workflow Overview', '1 min'],
+        ['4', 'Key Modeling Decisions', '1 min'],
+        ['5', 'Results and Discussions', '1 min'],
+        ['6', 'Feedback & Thank You', '45 sec']
     ]
-    timeline_table = Table(timeline_data, colWidths=[3*inch, 1.2*inch, 1.2*inch])
+    timeline_table = Table(timeline_data, colWidths=[0.8*inch, 3.5*inch, 1*inch])
     timeline_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), HexColor('#27ae60')),
         ('TEXTCOLOR', (0, 0), (-1, 0), white),
@@ -189,7 +179,6 @@ def create_walkthrough_pdf():
         ('FONTSIZE', (0, 0), (-1, -1), 10),
         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
         ('GRID', (0, 0), (-1, -1), 0.5, HexColor('#bdc3c7')),
-        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         ('BACKGROUND', (0, 1), (-1, -1), HexColor('#f8f9fa')),
         ('TOPPADDING', (0, 0), (-1, -1), 8),
         ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
@@ -198,296 +187,100 @@ def create_walkthrough_pdf():
     
     story.append(PageBreak())
     
-    story.append(Paragraph("PART 1: INTRODUCTION", section_style))
-    story.append(Paragraph("Slides 1-2 | Notebook Cells 1-3", subtitle_style))
-    story.append(Spacer(1, 10))
+    story.append(Paragraph("SLIDE 1: TITLE", section_style))
+    story.append(Paragraph("<b>SAY:</b> \"Good morning! We are Team Brain Oil, and we're presenting our machine learning solution for predicting oil production.\"", talking_point_style))
+    story.append(Paragraph("<b>SHOW:</b> Point to team names on the slide.", talking_point_style))
+    story.append(Paragraph("<b>KEY POINT:</b> Introduce yourselves confidently and quickly.", highlight_style))
+    story.append(Spacer(1, 20))
     
-    story.append(Paragraph("Opening (Slide 1)", subsection_style))
-    story.append(Paragraph("<b>SAY:</b> \"Good morning! We are Team Brain Oil, and today we'll show you how we predict "
-                          "oil production for 12 new wells using machine learning.\"", talking_point_style))
-    story.append(Paragraph("<b>SHOW:</b> Point to team names on the title slide.", talking_point_style))
-    story.append(Spacer(1, 10))
-    
-    story.append(Paragraph("The Challenge (Slide 2)", subsection_style))
-    story.append(Paragraph("<b>SAY:</b> \"The challenge is simple but important: Given well log data from 71 existing wells "
-                          "where we know how much oil they produced, can we predict what 12 new wells will produce over 3 years?\"", talking_point_style))
+    story.append(Paragraph("SLIDE 2: EXECUTIVE SUMMARY", section_style))
+    story.append(Paragraph("<b>SAY:</b> \"Let me quickly answer the four key questions...\"", talking_point_style))
     story.append(Spacer(1, 5))
-    story.append(Paragraph("• We have 71 training wells with known production", bullet_style))
-    story.append(Paragraph("• We need to predict for 12 test wells (IDs 72-83)", bullet_style))
-    story.append(Paragraph("• Output: Point estimate + 100 uncertainty scenarios per well", bullet_style))
-    story.append(Spacer(1, 10))
+    story.append(Paragraph("• <b>The Problem:</b> Predict 3-year cumulative oil production for 12 new wells with 100 uncertainty realizations.", bullet_style))
+    story.append(Paragraph("• <b>Our Solution:</b> Ridge Regression with alpha=1.0, StandardScaler normalization, stepwise feature selection, and Bagging for uncertainty.", bullet_style))
+    story.append(Paragraph("• <b>What We Learned:</b> Simple models beat complex ones for small datasets. Porosity is the #1 predictor.", bullet_style))
+    story.append(Paragraph("• <b>Our Results:</b> Test R² = 0.9905 (EXCELLENT), RMSE = 4.7% error.", bullet_style))
+    story.append(Paragraph("<b>KEY POINT:</b> We achieved EXCELLENT results by matching model complexity to data size.", highlight_style))
+    story.append(Spacer(1, 20))
     
-    story.append(Paragraph("<b>KEY POINT:</b> This is like predicting house prices from features - but for oil wells.", highlight_style))
-    story.append(Spacer(1, 10))
-    story.append(Paragraph("<b>TRANSITION:</b> \"Let me show you the data we worked with...\"", talking_point_style))
+    story.append(Paragraph("SLIDE 3: WORKFLOW OVERVIEW", section_style))
+    story.append(Paragraph("<b>SAY:</b> \"Our workflow has 7 key steps...\"", talking_point_style))
+    story.append(Spacer(1, 5))
+    story.append(Paragraph("1. Data Loading - 71 training wells, 12 test wells, sand proportion map", bullet_style))
+    story.append(Paragraph("2. MICE+CART Imputation - Fill missing values at depth level (Van Buuren 2018)", bullet_style))
+    story.append(Paragraph("3. Aggregation - Multiple depth rows become one row per well (mean, std, min, max)", bullet_style))
+    story.append(Paragraph("4. Feature Engineering - 105 features including RQI, FZI, spatial features", bullet_style))
+    story.append(Paragraph("5. Feature Selection - Correlation filter then stepwise selection (105→10)", bullet_style))
+    story.append(Paragraph("6. Model Training - Ridge Regression with StandardScaler", bullet_style))
+    story.append(Paragraph("7. Uncertainty - Bagging Ensemble with 100 estimators", bullet_style))
+    story.append(Paragraph("<b>KEY POINT:</b> Every step is research-backed with peer-reviewed citations.", highlight_style))
     
     story.append(PageBreak())
     
-    story.append(Paragraph("PART 2: DATA & METHODOLOGY", section_style))
-    story.append(Paragraph("Slides 3-7 | Notebook Cells 4-15", subtitle_style))
-    story.append(Spacer(1, 10))
-    
-    story.append(Paragraph("Understanding the Data (Slide 3)", subsection_style))
-    story.append(Paragraph("<b>SAY:</b> \"Each well has multiple measurements at different depths - about 21 readings per well. "
-                          "These include porosity, permeability, and other rock properties.\"", talking_point_style))
+    story.append(Paragraph("SLIDE 4: KEY MODELING DECISIONS", section_style))
+    story.append(Paragraph("<b>SAY:</b> \"Two key insights drove our success...\"", talking_point_style))
     story.append(Spacer(1, 5))
-    story.append(Paragraph("• <b>Porosity (phi)</b> - How much empty space in the rock (storage capacity)", bullet_style))
-    story.append(Paragraph("• <b>Permeability (perm)</b> - How easily oil can flow through the rock", bullet_style))
-    story.append(Paragraph("• <b>Gamma Ray (GR)</b> - Helps identify rock types (sand vs. shale)", bullet_style))
+    story.append(Paragraph("<b>Why Ridge Regression?</b>", subsection_style))
+    story.append(Paragraph("• With only 71 training wells, complex models overfit", bullet_style))
+    story.append(Paragraph("• Hastie et al. (2009): Regularized linear models beat trees for small n", bullet_style))
+    story.append(Paragraph("• Ridge R²=0.99 vs Random Forest R²=0.85 vs XGBoost R²=0.82", bullet_style))
     story.append(Spacer(1, 10))
+    story.append(Paragraph("<b>Why Porosity (φ) Matters Most?</b>", subsection_style))
+    story.append(Paragraph("• Porosity directly measures how much oil the rock can store", bullet_style))
+    story.append(Paragraph("• It appears in the fundamental OOIP equation", bullet_style))
+    story.append(Paragraph("• Domain experts always prioritize porosity over permeability", bullet_style))
+    story.append(Spacer(1, 10))
+    story.append(Paragraph("<b>KEY POINT:</b> Simple model + domain knowledge = winning combination.", highlight_style))
+    story.append(Spacer(1, 20))
     
-    story.append(Paragraph("Handling Missing Data (Slide 4)", subsection_style))
-    story.append(Paragraph("<b>SAY:</b> \"Real-world data has gaps. Instead of throwing away incomplete records, we used a "
-                          "smart technique called MICE - it fills in missing values by learning patterns from the data.\"", talking_point_style))
+    story.append(Paragraph("SLIDE 5: RESULTS AND DISCUSSIONS", section_style))
+    story.append(Paragraph("<b>SAY:</b> \"Our model achieved EXCELLENT performance by industry standards...\"", talking_point_style))
     story.append(Spacer(1, 5))
-    story.append(Paragraph(
-        "\"MICE + CART is the gold standard for missing data, recommended by Van Buuren in his 2018 textbook.\"",
-        quote_style
-    ))
-    story.append(Spacer(1, 10))
     
-    story.append(Paragraph("Aggregation: Multi-Row to Single-Row (Slide 5)", subsection_style))
-    story.append(Paragraph("<b>SAY:</b> \"Here's the key insight - each well has ~21 depth readings, but we need ONE prediction per well. "
-                          "So we aggregate: calculate the mean, standard deviation, minimum, and maximum of each property.\"", talking_point_style))
-    story.append(Spacer(1, 5))
-    story.append(Paragraph("<b>SHOW:</b> Diagram showing 21 rows becoming 1 row with summary statistics.", talking_point_style))
-    story.append(Spacer(1, 10))
-    
-    story.append(Paragraph("Feature Engineering (Slide 6)", subsection_style))
-    story.append(Paragraph("<b>SAY:</b> \"We created 19 industry-standard features that petroleum engineers actually use:\"", talking_point_style))
-    story.append(Spacer(1, 5))
-    story.append(Paragraph("• <b>RQI & FZI</b> - Rock quality indicators from Amaefule (1993)", bullet_style))
-    story.append(Paragraph("• <b>Net-to-Gross</b> - Proportion of productive rock", bullet_style))
-    story.append(Paragraph("• <b>Best Zone Features</b> - Properties at the highest-quality depth", bullet_style))
-    story.append(Paragraph("• <b>Spatial Features</b> - Location and sand proportion from geology maps", bullet_style))
-    story.append(Spacer(1, 10))
-    
-    story.append(Paragraph("<b>KEY POINT:</b> We started with 105 features and narrowed down to 10 optimal ones.", highlight_style))
-    story.append(Spacer(1, 10))
-    story.append(Paragraph("<b>TRANSITION:</b> \"Let me show you our spatial analysis...\"", talking_point_style))
-    story.append(Spacer(1, 15))
-    
-    story.append(Paragraph("Spatial Analysis: Sand Heat Map (Slide 7)", subsection_style))
-    story.append(Paragraph("<b>SAY:</b> \"This is our spatial analysis map. The background shows sand proportion - "
-                          "yellow means more sand, darker means more shale. The dots are our wells.\"", talking_point_style))
-    story.append(Spacer(1, 5))
-    story.append(Paragraph("• <b>Circles</b> - Production wells (color = actual 3-year oil production)", bullet_style))
-    story.append(Paragraph("• <b>X markers</b> - Pre-production wells (color = our predictions)", bullet_style))
-    story.append(Paragraph("• <b>Yellow background</b> - High sand proportion (better reservoir quality)", bullet_style))
-    story.append(Spacer(1, 10))
-    story.append(Paragraph("<b>SAY:</b> \"Notice how the highest-producing wells (green/yellow dots) tend to be in "
-                          "higher sand areas. This validates that our spatial features are capturing real geology.\"", talking_point_style))
-    story.append(Spacer(1, 10))
-    story.append(Paragraph("<b>KEY POINT:</b> Geology matters - high sand = high production. Our model learns this pattern.", highlight_style))
-    story.append(Spacer(1, 10))
-    story.append(Paragraph("<b>TRANSITION:</b> \"Now let's see how our model performed...\"", talking_point_style))
-    
-    story.append(PageBreak())
-    
-    story.append(Paragraph("PART 3: RESULTS & WHY RIDGE WON", section_style))
-    story.append(Paragraph("Slides 8-11 | Notebook Cells 16-25", subtitle_style))
-    story.append(Spacer(1, 10))
-    
-    story.append(Paragraph("Model Comparison (Slide 8)", subsection_style))
-    story.append(Paragraph("<b>SAY:</b> \"We tested 57 different configurations across 4 model types. Here's what we found:\"", talking_point_style))
-    story.append(Spacer(1, 10))
-    
-    model_data = [
-        ['Model', 'Test R²', 'Verdict'],
-        ['Ridge Regression', '0.9905', 'WINNER'],
-        ['Random Forest', '0.85', 'Good'],
-        ['XGBoost', '0.82', 'Acceptable'],
-        ['Elastic Net', '0.88', 'Good']
+    results_data = [
+        ['Metric', 'Our Result', 'Industry Benchmark'],
+        ['Test R²', '0.9905', '≥0.93 = Excellent'],
+        ['CV R²', '0.9539 ± 0.0456', 'Stable'],
+        ['RMSE', '1.57M BBL (4.7%)', '<10% = Excellent']
     ]
-    model_table = Table(model_data, colWidths=[2.5*inch, 1.5*inch, 1.5*inch])
-    model_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), HexColor('#1a5276')),
-        ('TEXTCOLOR', (0, 0), (-1, 0), white),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, -1), 11),
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-        ('GRID', (0, 0), (-1, -1), 0.5, HexColor('#bdc3c7')),
-        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ('BACKGROUND', (0, 1), (-1, 1), HexColor('#d5f5e3')),
-        ('FONTNAME', (0, 1), (-1, 1), 'Helvetica-Bold'),
-        ('BACKGROUND', (0, 2), (-1, -1), HexColor('#f8f9fa')),
-        ('TOPPADDING', (0, 0), (-1, -1), 8),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
-    ]))
-    story.append(model_table)
-    story.append(Spacer(1, 15))
-    
-    story.append(Paragraph("Why Ridge Beat Complex Models (Slide 9)", subsection_style))
-    story.append(Paragraph("<b>SAY:</b> \"You might ask - why did a simple model beat fancy ones like XGBoost? "
-                          "The answer is in the data size.\"", talking_point_style))
-    story.append(Spacer(1, 10))
-    story.append(Paragraph(
-        "\"For small datasets (n < 100), regularized linear models often outperform tree-based ensembles "
-        "due to lower variance.\" — Hastie, Tibshirani & Friedman (2009), The Elements of Statistical Learning",
-        quote_style
-    ))
-    story.append(Spacer(1, 10))
-    story.append(Paragraph("<b>SAY:</b> \"With only 71 training wells, complex models overfit. Ridge keeps it simple and stable.\"", talking_point_style))
-    story.append(Spacer(1, 10))
-    
-    story.append(Paragraph("Our Performance Metrics (Slide 10)", subsection_style))
-    metrics_data = [
-        ['Metric', 'Our Result', 'Industry Benchmark', 'Status'],
-        ['Test R²', '0.9905', '≥ 0.93 = Excellent', 'EXCELLENT'],
-        ['CV R²', '0.9539 ± 0.05', 'Stable', 'VERY STABLE'],
-        ['RMSE', '1.57M BBL', '< 10% of mean', '4.7% - GREAT']
-    ]
-    metrics_table = Table(metrics_data, colWidths=[1.5*inch, 1.5*inch, 1.8*inch, 1.2*inch])
-    metrics_table.setStyle(TableStyle([
+    results_table = Table(results_data, colWidths=[1.5*inch, 2*inch, 2*inch])
+    results_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), HexColor('#27ae60')),
         ('TEXTCOLOR', (0, 0), (-1, 0), white),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
         ('FONTSIZE', (0, 0), (-1, -1), 10),
         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
         ('GRID', (0, 0), (-1, -1), 0.5, HexColor('#bdc3c7')),
-        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         ('BACKGROUND', (0, 1), (-1, -1), HexColor('#f8f9fa')),
-        ('TOPPADDING', (0, 0), (-1, -1), 6),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+        ('TOPPADDING', (0, 0), (-1, -1), 8),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
     ]))
-    story.append(metrics_table)
+    story.append(results_table)
     story.append(Spacer(1, 10))
-    
-    story.append(Paragraph("<b>SAY:</b> \"R² of 0.99 means our model explains 99% of the variation in oil production. "
-                          "The error is only 4.7% of the average production - well within industry standards.\"", talking_point_style))
-    story.append(Spacer(1, 10))
-    
-    story.append(Paragraph("Feature Importance (Slide 11)", subsection_style))
-    story.append(Paragraph("<b>SAY:</b> \"The top predictor is porosity - phi_mean. This makes perfect sense because "
-                          "porosity directly measures how much oil the rock can store.\"", talking_point_style))
-    story.append(Spacer(1, 5))
-    story.append(Paragraph("• More pore space = more oil storage = higher production", bullet_style))
-    story.append(Paragraph("• This aligns with fundamental reservoir engineering principles", bullet_style))
-    story.append(Spacer(1, 10))
-    
-    story.append(Paragraph("<b>KEY POINT:</b> Simple model + domain knowledge = best results.", highlight_style))
-    story.append(Spacer(1, 10))
-    story.append(Paragraph("<b>TRANSITION:</b> \"Let me show you our actual predictions...\"", talking_point_style))
+    story.append(Paragraph("• Predictions for all 12 wells (72-83) with 100 realizations each", bullet_style))
+    story.append(Paragraph("• Production range: ~15M to ~47M BBL over 3 years", bullet_style))
+    story.append(Paragraph("<b>KEY POINT:</b> R² = 0.99 means our model explains 99% of production variation.", highlight_style))
     
     story.append(PageBreak())
     
-    story.append(Paragraph("PART 4: PREDICTIONS & UNCERTAINTY", section_style))
-    story.append(Paragraph("Slides 12-13 | Notebook Cells 26-32", subtitle_style))
-    story.append(Spacer(1, 10))
-    
-    story.append(Paragraph("Final Predictions (Slide 12)", subsection_style))
-    story.append(Paragraph("<b>SAY:</b> \"Here are our predictions for the 12 new wells. Production ranges from about "
-                          "15 million to 47 million barrels over 3 years.\"", talking_point_style))
-    story.append(Spacer(1, 10))
-    story.append(Paragraph("<b>SHOW:</b> Point to the prediction chart showing all 12 wells.", talking_point_style))
-    story.append(Spacer(1, 10))
-    
-    story.append(Paragraph("Uncertainty Quantification (Slide 13)", subsection_style))
-    story.append(Paragraph("<b>SAY:</b> \"Predictions are only useful if we know how confident we are. We used a technique "
-                          "called Bagging - training 100 different models and combining their predictions.\"", talking_point_style))
+    story.append(Paragraph("SLIDE 6: FEEDBACK", section_style))
+    story.append(Paragraph("<b>SAY:</b> \"To wrap up, here's what we learned and our feedback...\"", talking_point_style))
     story.append(Spacer(1, 5))
-    story.append(Paragraph("• Each model sees a slightly different sample of the data", bullet_style))
-    story.append(Paragraph("• This gives us 100 different predictions (R1-R100)", bullet_style))
-    story.append(Paragraph("• The spread shows our uncertainty for each well", bullet_style))
+    story.append(Paragraph("<b>What We Learned:</b>", subsection_style))
+    story.append(Paragraph("• Simple models win for small datasets", bullet_style))
+    story.append(Paragraph("• Domain knowledge (porosity priority) improves results", bullet_style))
+    story.append(Paragraph("• MICE+CART is the gold standard for imputation", bullet_style))
     story.append(Spacer(1, 10))
-    story.append(Paragraph(
-        "\"Bagging reduces variance by averaging over bootstrap samples.\" — Breiman (1996)",
-        quote_style
-    ))
+    story.append(Paragraph("<b>What We Liked:</b>", subsection_style))
+    story.append(Paragraph("• Real-world petroleum engineering challenge", bullet_style))
+    story.append(Paragraph("• Excellent workshop materials from Prof. Pyrcz and Prof. Foster", bullet_style))
     story.append(Spacer(1, 10))
-    
-    story.append(Paragraph("<b>KEY POINT:</b> We don't just give a number - we give a range of possibilities.", highlight_style))
-    story.append(Spacer(1, 10))
-    story.append(Paragraph("<b>TRANSITION:</b> \"Let me wrap up with our key takeaways...\"", talking_point_style))
-    
-    story.append(PageBreak())
-    
-    story.append(Paragraph("PART 5: CONCLUSION", section_style))
-    story.append(Paragraph("Slides 14-15 | Summary", subtitle_style))
-    story.append(Spacer(1, 10))
-    
-    story.append(Paragraph("Key Achievements (Slide 14)", subsection_style))
-    story.append(Paragraph("<b>SAY:</b> \"To summarize what we accomplished:\"", talking_point_style))
-    story.append(Spacer(1, 10))
-    story.append(Paragraph("1. <b>Excellent accuracy</b> - 99% R², 4.7% error rate", bullet_style))
-    story.append(Paragraph("2. <b>Research-backed approach</b> - Every decision supported by peer-reviewed literature", bullet_style))
-    story.append(Paragraph("3. <b>Uncertainty quantification</b> - 100 scenarios per prediction for risk assessment", bullet_style))
-    story.append(Paragraph("4. <b>Interactive application</b> - Streamlit app for real-time experimentation", bullet_style))
-    story.append(Spacer(1, 10))
-    
-    story.append(Paragraph("Why Our Approach Works (Slide 14 continued)", subsection_style))
-    story.append(Paragraph("<b>SAY:</b> \"We succeeded because we matched the model complexity to the data size. "
-                          "With 71 wells, simplicity wins over complexity.\"", talking_point_style))
-    story.append(Spacer(1, 15))
-    
-    story.append(Paragraph("Thank You & Questions (Slide 15)", subsection_style))
-    story.append(Paragraph("<b>SAY:</b> \"Thank you for your attention. We're happy to answer any questions about our "
-                          "methodology, the domain science, or our interactive application.\"", talking_point_style))
-    story.append(Spacer(1, 20))
-    
-    story.append(Paragraph("ANTICIPATED Q&A", section_style))
-    story.append(Spacer(1, 10))
-    
-    story.append(Paragraph("Q: Why not use deep learning?", subsection_style))
-    story.append(Paragraph("<b>A:</b> \"Deep learning needs thousands of examples to work well. With only 71 wells, "
-                          "it would severely overfit. Our Ridge model is the right tool for this data size.\"", body_style))
-    story.append(Spacer(1, 10))
-    
-    story.append(Paragraph("Q: How did you handle the spatial data?", subsection_style))
-    story.append(Paragraph("<b>A:</b> \"We used a smoothed 3x3 sand proportion map. The smoothing reduces noise while "
-                          "preserving the overall geological trends.\"", body_style))
-    story.append(Spacer(1, 10))
-    
-    story.append(Paragraph("Q: What if the geology changes?", subsection_style))
-    story.append(Paragraph("<b>A:</b> \"Our uncertainty ranges capture this. Wells in less-characterized areas will show "
-                          "wider prediction intervals. The model learns from similar wells nearby.\"", body_style))
-    story.append(Spacer(1, 10))
-    
-    story.append(Paragraph("Q: Can this scale to more wells?", subsection_style))
-    story.append(Paragraph("<b>A:</b> \"Absolutely. And with more data, we could explore more complex models. "
-                          "Our Streamlit app makes it easy to retrain with new data.\"", body_style))
+    story.append(Paragraph("<b>SAY:</b> \"Thank you for your attention. We're happy to answer questions.\"", talking_point_style))
+    story.append(Paragraph("<b>KEY POINT:</b> End confidently and invite questions.", highlight_style))
     
     story.append(PageBreak())
     
     story.append(Paragraph("QUICK REFERENCE CARD", section_style))
-    story.append(Spacer(1, 10))
-    
-    story.append(Paragraph("Key Numbers to Remember", subsection_style))
-    numbers_data = [
-        ['Item', 'Value'],
-        ['Training Wells', '71'],
-        ['Test Wells', '12 (IDs 72-83)'],
-        ['Test R²', '0.9905 (99%)'],
-        ['RMSE', '1.57M BBL (4.7%)'],
-        ['Features Used', '10 (from 105)'],
-        ['Uncertainty Scenarios', '100 per well'],
-        ['Configurations Tested', '57+']
-    ]
-    numbers_table = Table(numbers_data, colWidths=[2.5*inch, 3*inch])
-    numbers_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), HexColor('#8e44ad')),
-        ('TEXTCOLOR', (0, 0), (-1, 0), white),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, -1), 11),
-        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('GRID', (0, 0), (-1, -1), 0.5, HexColor('#bdc3c7')),
-        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ('BACKGROUND', (0, 1), (-1, -1), HexColor('#f8f9fa')),
-        ('LEFTPADDING', (0, 0), (-1, -1), 15),
-        ('TOPPADDING', (0, 0), (-1, -1), 8),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
-    ]))
-    story.append(numbers_table)
-    story.append(Spacer(1, 20))
-    
-    story.append(Paragraph("Academic References (If Asked)", subsection_style))
-    story.append(Paragraph("• <b>Ridge Regression:</b> Hastie, Tibshirani & Friedman (2009)", bullet_style))
-    story.append(Paragraph("• <b>Missing Data (MICE):</b> Van Buuren (2018)", bullet_style))
-    story.append(Paragraph("• <b>Bagging:</b> Breiman (1996)", bullet_style))
-    story.append(Paragraph("• <b>RQI/FZI:</b> Amaefule et al. (1993)", bullet_style))
-    story.append(Spacer(1, 20))
-    
-    story.append(Paragraph("Winning Configuration", subsection_style))
     config_data = [
         ['Setting', 'Value'],
         ['Model', 'Ridge Regression'],
@@ -495,7 +288,9 @@ def create_walkthrough_pdf():
         ['Normalization', 'StandardScaler (CRITICAL)'],
         ['Sand Map', 'Smooth 3x3'],
         ['Feature Selection', 'Stepwise (105 → 10)'],
-        ['Uncertainty', 'Bagging Ensemble (100)']
+        ['Uncertainty', 'Bagging Ensemble (100)'],
+        ['Test R²', '0.9905 (EXCELLENT)'],
+        ['RMSE', '1.57M BBL (4.7%)']
     ]
     config_table = Table(config_data, colWidths=[2.5*inch, 3*inch])
     config_table.setStyle(TableStyle([
@@ -505,19 +300,30 @@ def create_walkthrough_pdf():
         ('FONTSIZE', (0, 0), (-1, -1), 11),
         ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
         ('GRID', (0, 0), (-1, -1), 0.5, HexColor('#bdc3c7')),
-        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         ('BACKGROUND', (0, 1), (-1, -1), HexColor('#f8f9fa')),
-        ('LEFTPADDING', (0, 0), (-1, -1), 15),
+        ('LEFTPADDING', (0, 0), (-1, -1), 10),
         ('TOPPADDING', (0, 0), (-1, -1), 8),
         ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
     ]))
     story.append(config_table)
-    story.append(Spacer(1, 30))
+    story.append(Spacer(1, 20))
     
-    story.append(Paragraph("Good luck with the presentation!", 
-                          ParagraphStyle('GoodLuck', parent=highlight_style, textColor=HexColor('#27ae60'), fontSize=14)))
-    story.append(Paragraph("Team Brain Oil - Energy AI Hackathon 2026", 
-                          ParagraphStyle('Footer', parent=team_style, fontSize=10)))
+    story.append(Paragraph("ANTICIPATED Q&A", section_style))
+    qa = [
+        ("Q: Why not use Random Forest or XGBoost?", 
+         "A: With only 71 training wells, complex models overfit. Ridge's R²=0.99 beat RF's 0.85 and XGB's 0.82."),
+        ("Q: Why is porosity the most important feature?",
+         "A: Porosity directly measures storage capacity. It's in the fundamental OOIP equation: OOIP = 7758 × A × h × φ × (1-Sw) / Bo."),
+        ("Q: How did you handle missing data?",
+         "A: MICE + CART imputation at the depth level before aggregation, per Van Buuren (2018) recommendations."),
+        ("Q: How confident are you in these predictions?",
+         "A: Very confident. R²=0.99 with only 4.7% error. The 100 realizations capture uncertainty via Bagging Ensemble.")
+    ]
+    
+    for q, a in qa:
+        story.append(Paragraph(f"<b>{q}</b>", body_style))
+        story.append(Paragraph(a, bullet_style))
+        story.append(Spacer(1, 8))
     
     doc.build(story)
     print("PDF created successfully: Presentation_Walkthrough.pdf")
