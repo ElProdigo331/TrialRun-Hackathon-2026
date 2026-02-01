@@ -1004,10 +1004,40 @@ elif page == "5. Model Training":
             st.session_state.model_type = model_type
             
             with st.spinner("Training model..."):
+                from sklearn.model_selection import train_test_split
+                from sklearn.metrics import mean_absolute_error, mean_squared_error
+                
+                X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+                
                 cv_scores = cross_val_score(model, X, y, cv=cv_folds, scoring='r2')
                 
                 y_pred_cv = cross_val_predict(model, X, y, cv=cv_folds)
                 cv_residuals = y - y_pred_cv
+                
+                if model_type == "Random Forest":
+                    model_for_split = RandomForestRegressor(
+                        n_estimators=model.n_estimators, max_depth=model.max_depth,
+                        min_samples_split=model.min_samples_split, min_samples_leaf=model.min_samples_leaf,
+                        max_features=model.max_features, random_state=42, n_jobs=-1
+                    )
+                elif model_type == "XGBoost":
+                    model_for_split = xgb.XGBRegressor(
+                        n_estimators=model.n_estimators, max_depth=model.max_depth,
+                        learning_rate=model.learning_rate, random_state=42, n_jobs=-1
+                    )
+                else:
+                    model_for_split = model.__class__(**model.get_params())
+                
+                model_for_split.fit(X_train, y_train)
+                y_pred_train = model_for_split.predict(X_train)
+                y_pred_test = model_for_split.predict(X_test)
+                
+                train_r2 = r2_score(y_train, y_pred_train)
+                test_r2 = r2_score(y_test, y_pred_test)
+                train_mae = mean_absolute_error(y_train, y_pred_train)
+                test_mae = mean_absolute_error(y_test, y_pred_test)
+                train_rmse = np.sqrt(mean_squared_error(y_train, y_pred_train))
+                test_rmse = np.sqrt(mean_squared_error(y_test, y_pred_test))
                 
                 model.fit(X, y)
                 y_pred = model.predict(X)
@@ -1018,16 +1048,40 @@ elif page == "5. Model Training":
             
             st.success(f"{model_type} trained successfully!")
             
-            from sklearn.metrics import mean_absolute_error, mean_squared_error
+            st.subheader("📊 Train/Test Split Evaluation (80/20 Split)")
+            st.markdown("*Model trained on 80% of data, evaluated on held-out 20%*")
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                st.markdown("**Training Set Metrics:**")
+                st.metric("Train R²", f"{train_r2:.4f}")
+                st.metric("Train MAE", f"{train_mae:,.0f} BBL")
+                st.metric("Train RMSE", f"{train_rmse:,.0f} BBL")
+            
+            with col2:
+                st.markdown("**Test Set Metrics (Held-Out):**")
+                delta_val = f"{test_r2 - train_r2:.4f}" if test_r2 < train_r2 else None
+                st.metric("Test R²", f"{test_r2:.4f}", delta=delta_val)
+                st.metric("Test MAE", f"{test_mae:,.0f} BBL")
+                st.metric("Test RMSE", f"{test_rmse:,.0f} BBL")
+            
+            if train_r2 - test_r2 > 0.15:
+                st.warning("⚠️ Large gap between Train and Test R² may indicate overfitting. Consider simpler model or more regularization.")
+            elif test_r2 > 0.3:
+                st.success("✅ Model generalizes well to unseen data!")
+            
+            st.divider()
+            st.subheader("📈 Cross-Validation & Full Model Metrics")
+            
             mae = mean_absolute_error(y, y_pred)
             mse = mean_squared_error(y, y_pred)
             rmse = np.sqrt(mse)
             
             col1, col2, col3, col4 = st.columns(4)
             col1.metric("CV R² Mean", f"{cv_scores.mean():.4f}")
-            col2.metric("Train R²", f"{r2_score(y, y_pred):.4f}")
-            col3.metric("MAE", f"{mae:,.0f} BBL")
-            col4.metric("RMSE", f"{rmse:,.0f} BBL")
+            col2.metric("CV R² Std", f"±{cv_scores.std():.4f}")
+            col3.metric("Full Data MAE", f"{mae:,.0f} BBL")
+            col4.metric("Full Data RMSE", f"{rmse:,.0f} BBL")
             
             if hasattr(model, 'oob_score_') and model.oob_score:
                 st.metric("OOB R² Score", f"{model.oob_score_:.4f}")
