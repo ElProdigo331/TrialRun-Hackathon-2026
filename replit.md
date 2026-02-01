@@ -80,6 +80,24 @@ Each well has ~21 rows (depth measurements Z=19-39). Must aggregate to one row p
 | OOB samples | ✅ Done | oob_score=True for RF |
 | Residual bootstrapping | ✅ Done | 100 realizations (R1-R100) |
 | SHAP values | ✅ Done | TreeExplainer + summary plots |
+| Train/Test split evaluation | ✅ Done | 80/20 split with separate metrics |
+| Uncertainty calibration check | ✅ Done | 5-fold CV with coverage analysis |
+
+---
+
+## Model Evaluation Features
+
+### Train/Test Split (80/20)
+Shows separate metrics for training and held-out test data:
+- **Training Set:** R², MAE, RMSE on 80% of data
+- **Test Set:** R², MAE, RMSE on held-out 20%
+- **Overfitting Detection:** Warning if Train R² >> Test R²
+
+### Uncertainty Calibration Check
+Validates if the R1-R100 prediction intervals are reliable:
+- **90% Coverage:** Should be ~90% (actual values within P5-P95 range)
+- **50% Coverage:** Should be ~50% (actual values within P25-P75 range)
+- **Calibration Plot:** Visual showing which wells are within predicted ranges
 
 ---
 
