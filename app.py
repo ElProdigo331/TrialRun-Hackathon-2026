@@ -1147,6 +1147,148 @@ elif page == "5. Model Training":
                                labels={'x': 'Predicted', 'y': 'Residual'})
                 fig.add_hline(y=0, line_dash="dash", line_color="red")
                 st.plotly_chart(fig, use_container_width=True)
+            
+            st.divider()
+            st.subheader("🎯 Uncertainty Calibration Check")
+            st.markdown("""
+            *Tests if the model's uncertainty (R1-R100) is reliable by holding out some training wells,
+            predicting them with uncertainty, and checking if actual values fall within the predicted range.*
+            """)
+            
+            if st.button("Run Calibration Check", type="secondary"):
+                with st.spinner("Running calibration check (hold-out validation)..."):
+                    from sklearn.model_selection import KFold
+                    
+                    train_df = st.session_state.train_df
+                    n_folds = 5
+                    kf = KFold(n_splits=n_folds, shuffle=True, random_state=42)
+                    
+                    coverage_90 = []
+                    coverage_50 = []
+                    interval_widths = []
+                    all_results = []
+                    
+                    X_full = train_df[feature_cols].fillna(0)
+                    y_full = train_df['Target_3yr_Oil_BBL']
+                    
+                    if normalize_features:
+                        X_full_scaled = pd.DataFrame(scaler.transform(X_full), columns=X_full.columns, index=X_full.index)
+                    else:
+                        X_full_scaled = X_full
+                    
+                    for fold_idx, (train_idx, test_idx) in enumerate(kf.split(X_full_scaled)):
+                        X_fold_train = X_full_scaled.iloc[train_idx]
+                        X_fold_test = X_full_scaled.iloc[test_idx]
+                        y_fold_train = y_full.iloc[train_idx]
+                        y_fold_test = y_full.iloc[test_idx]
+                        
+                        if model_type == "Random Forest":
+                            fold_model = RandomForestRegressor(
+                                n_estimators=model.n_estimators, max_depth=model.max_depth,
+                                min_samples_split=model.min_samples_split, min_samples_leaf=model.min_samples_leaf,
+                                max_features=model.max_features, random_state=42, n_jobs=-1
+                            )
+                        elif model_type == "XGBoost":
+                            fold_model = xgb.XGBRegressor(
+                                n_estimators=model.n_estimators, max_depth=model.max_depth,
+                                learning_rate=model.learning_rate, random_state=42, n_jobs=-1
+                            )
+                        else:
+                            fold_model = model.__class__(**model.get_params())
+                        
+                        fold_model.fit(X_fold_train, y_fold_train)
+                        
+                        fold_preds = fold_model.predict(X_fold_train)
+                        fold_residuals = y_fold_train.values - fold_preds
+                        
+                        point_preds = fold_model.predict(X_fold_test)
+                        
+                        n_realizations = 100
+                        for i, (idx, actual) in enumerate(zip(test_idx, y_fold_test)):
+                            realizations = point_preds[i] + np.random.choice(fold_residuals, size=n_realizations, replace=True)
+                            realizations = np.maximum(realizations, 0)
+                            
+                            p5 = np.percentile(realizations, 5)
+                            p95 = np.percentile(realizations, 95)
+                            p25 = np.percentile(realizations, 25)
+                            p75 = np.percentile(realizations, 75)
+                            
+                            in_90 = 1 if p5 <= actual <= p95 else 0
+                            in_50 = 1 if p25 <= actual <= p75 else 0
+                            
+                            coverage_90.append(in_90)
+                            coverage_50.append(in_50)
+                            interval_widths.append(p95 - p5)
+                            
+                            all_results.append({
+                                'Well_ID': train_df.iloc[idx]['Well_ID'],
+                                'Actual': actual,
+                                'Predicted': point_preds[i],
+                                'P5': p5,
+                                'P95': p95,
+                                'In_90_Range': 'Yes' if in_90 else 'No'
+                            })
+                    
+                    actual_coverage_90 = np.mean(coverage_90) * 100
+                    actual_coverage_50 = np.mean(coverage_50) * 100
+                    avg_width = np.mean(interval_widths)
+                    
+                    st.markdown("### Calibration Results")
+                    
+                    col1, col2, col3 = st.columns(3)
+                    
+                    with col1:
+                        delta_90 = actual_coverage_90 - 90
+                        color = "normal" if abs(delta_90) < 10 else "off"
+                        st.metric("90% Interval Coverage", f"{actual_coverage_90:.1f}%", 
+                                  delta=f"{delta_90:+.1f}% vs target 90%",
+                                  delta_color="normal" if abs(delta_90) < 10 else "inverse")
+                    
+                    with col2:
+                        delta_50 = actual_coverage_50 - 50
+                        st.metric("50% Interval Coverage", f"{actual_coverage_50:.1f}%",
+                                  delta=f"{delta_50:+.1f}% vs target 50%",
+                                  delta_color="normal" if abs(delta_50) < 15 else "inverse")
+                    
+                    with col3:
+                        st.metric("Avg 90% Interval Width", f"{avg_width/1e6:.1f}M BBL")
+                    
+                    if actual_coverage_90 >= 85 and actual_coverage_90 <= 95:
+                        st.success("✅ **Well-Calibrated!** The 90% prediction intervals contain ~90% of actual values. Uncertainty estimates are reliable.")
+                    elif actual_coverage_90 < 85:
+                        st.warning(f"⚠️ **Under-Coverage ({actual_coverage_90:.0f}%):** Model is over-confident. Actual values fall outside predicted ranges too often. Consider widening uncertainty or using a different model.")
+                    else:
+                        st.info(f"📊 **Over-Coverage ({actual_coverage_90:.0f}%):** Model is under-confident. Prediction intervals are wider than necessary, but this is conservative (safe).")
+                    
+                    results_df = pd.DataFrame(all_results)
+                    
+                    st.markdown("### Individual Well Calibration")
+                    
+                    fig = go.Figure()
+                    
+                    for i, row in results_df.iterrows():
+                        color = 'green' if row['In_90_Range'] == 'Yes' else 'red'
+                        fig.add_trace(go.Scatter(
+                            x=[row['P5'], row['P95']], y=[i, i],
+                            mode='lines', line=dict(color=color, width=8),
+                            showlegend=False, hoverinfo='skip'
+                        ))
+                        fig.add_trace(go.Scatter(
+                            x=[row['Actual']], y=[i],
+                            mode='markers', marker=dict(color='black', size=10, symbol='diamond'),
+                            showlegend=False,
+                            hovertemplate=f"Well {row['Well_ID']}<br>Actual: {row['Actual']/1e6:.1f}M<br>Range: {row['P5']/1e6:.1f}M - {row['P95']/1e6:.1f}M"
+                        ))
+                    
+                    fig.update_layout(
+                        title="Calibration Plot: Actual (◆) vs 90% Prediction Interval",
+                        xaxis_title="Oil Production (BBL)",
+                        yaxis_title="Well Index",
+                        height=500
+                    )
+                    st.plotly_chart(fig, use_container_width=True)
+                    
+                    st.caption("**Green bars:** Actual value within 90% range (good). **Red bars:** Actual value outside range (model was wrong).")
 
 elif page == "6. Generate Solution":
     st.header("Step 6: Generate Solution File")
