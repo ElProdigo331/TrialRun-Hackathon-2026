@@ -16,7 +16,7 @@
 |----------|--------|------------|
 | **Technical Performance** | HIGH | Test R² = 0.9905 (EXCELLENT) |
 | **Solution Design** | HIGH | Ridge + Stepwise + Bagging (research-backed) |
-| **Presentation** | HIGH | 14 slides ready, needs team names |
+| **Presentation** | HIGH | 15 slides ready with team names |
 | **Innovation** | MEDIUM | AI Assistant, Feature Selection, Experiment Tracking |
 | **Potential Impact** | LOW | Industry-applicable methodology |
 
@@ -40,7 +40,7 @@
 - [x] Team member names added: Kailasadatta Boggaram, Jayanth Damodaran, Bilal Shihab, Carlos Fabela
 
 ### 3. Brain_Oil.pptx ✅ STRUCTURE READY
-- [x] 14 slides total
+- [x] 15 slides total (including Sand Heat Map)
 - [x] Slide 1: Title with team name placeholder
 - [x] Slides 2-13: Full methodology and results
 - [x] Slide 14: Thank you / Q&A

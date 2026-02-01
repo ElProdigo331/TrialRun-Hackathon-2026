@@ -89,7 +89,7 @@ Then open your browser to: **http://localhost:5000**
 │   └── experiment_history.json
 ├── notebooks/
 │   └── BrainOil.ipynb        # Submission notebook
-├── Brain_Oil.pptx            # Presentation
+├── Brain_Oil.pptx            # Presentation (15 slides)
 ├── Presentation_Walkthrough.pdf  # Presenter's guide
 └── Laymans_Guide_to_ML_Workflow.md  # Plain-English guide
 ```
