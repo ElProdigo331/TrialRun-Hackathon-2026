@@ -1,6 +1,6 @@
 # Energy AI Hackathon 2026 - Oil Production Prediction
 
-**Team:** Brain Oil
+**Team:** Brain Oil (Kailasadatta Boggaram, Jayanth Damodaran, Bilal Shihab, Carlos Fabela)
 
 ## Overview
 
@@ -137,4 +137,10 @@ Then open your browser to: **http://localhost:5000**
 - optuna, xgboost, openai (optional)
 
 ## Team Brain Oil
-Energy AI Hackathon 2026
+
+- **Kailasadatta Boggaram**
+- **Jayanth Damodaran**
+- **Bilal Shihab**
+- **Carlos Fabela**
+
+Energy AI Hackathon 2026 | The University of Texas at Austin

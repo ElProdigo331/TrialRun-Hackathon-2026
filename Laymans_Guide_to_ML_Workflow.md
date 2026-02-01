@@ -4,6 +4,8 @@
 
 ### For Team Brain Oil - Energy AI Hackathon 2026
 
+**Team Members:** Kailasadatta Boggaram | Jayanth Damodaran | Bilal Shihab | Carlos Fabela
+
 ---
 
 ## What Are We Building?

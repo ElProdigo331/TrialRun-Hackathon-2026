@@ -2,6 +2,12 @@
 
 ## Team Brain Oil - Final Verification
 
+**Team Members:**
+- Kailasadatta Boggaram
+- Jayanth Damodaran
+- Bilal Shihab
+- Carlos Fabela
+
 ---
 
 ## Judging Categories
@@ -31,14 +37,14 @@
 - [x] Ridge Regression as final model
 - [x] Executive summary with results (R²=0.9905)
 - [x] Academic citations included
-- [ ] **NEEDS: Team member names on title**
+- [x] Team member names added: Kailasadatta Boggaram, Jayanth Damodaran, Bilal Shihab, Carlos Fabela
 
 ### 3. Brain_Oil.pptx ✅ STRUCTURE READY
 - [x] 14 slides total
 - [x] Slide 1: Title with team name placeholder
 - [x] Slides 2-13: Full methodology and results
 - [x] Slide 14: Thank you / Q&A
-- [ ] **CRITICAL: Add ALL team member FULL NAMES to Slide 1**
+- [x] Team member FULL NAMES added to Slide 1
 
 ### 4. README.md ✅ READY
 - [x] Updated for 2026 (oil production)
@@ -105,7 +111,7 @@ Wells: 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83
 - [x] Correct Well IDs (72-83)
 - [x] Ridge Regression documented as winner
 - [x] Academic citations throughout
-- [ ] **Team member FULL NAMES on presentation**
+- [x] Team member FULL NAMES on presentation
 
 ### Technical Verification
 - [x] App runs without errors
@@ -117,13 +123,13 @@ Wells: 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83
 
 ## REMAINING ACTION ITEMS
 
-| Priority | Item | Owner |
-|----------|------|-------|
-| **CRITICAL** | Add team member full names to PowerPoint Slide 1 | User |
-| **CRITICAL** | Add team member names to Notebook title | User |
-| HIGH | Push to hackathon GitHub repo | User |
-| HIGH | Practice 10-minute presentation | Team |
-| MEDIUM | Review Q&A backup slides | Team |
+| Priority | Item | Owner | Status |
+|----------|------|-------|--------|
+| ~~CRITICAL~~ | ~~Add team member full names to PowerPoint Slide 1~~ | ~~User~~ | ✅ DONE |
+| ~~CRITICAL~~ | ~~Add team member names to Notebook title~~ | ~~User~~ | ✅ DONE |
+| HIGH | Push to hackathon GitHub repo | Team | Pending |
+| HIGH | Practice 10-minute presentation | Team | Pending |
+| MEDIUM | Review Q&A backup slides | Team | Pending |
 
 ---
 
@@ -132,8 +138,8 @@ Wells: 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83
 | File | Location | Status |
 |------|----------|--------|
 | solution.csv | /solution.csv | ✅ Ready |
-| BrainOil.ipynb | /notebooks/BrainOil.ipynb | ✅ Ready (needs names) |
-| Brain_Oil.pptx | /Brain_Oil.pptx | ✅ Ready (needs names) |
+| BrainOil.ipynb | /notebooks/BrainOil.ipynb | ✅ Ready |
+| Brain_Oil.pptx | /Brain_Oil.pptx | ✅ Ready |
 | README.md | /README.md | ✅ Ready |
 
 ---
@@ -149,5 +155,5 @@ Wells: 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83
 ---
 
 **Last Updated:** February 1, 2026
-**Team:** Brain Oil
+**Team:** Brain Oil (Kailasadatta Boggaram, Jayanth Damodaran, Bilal Shihab, Carlos Fabela)
 **Competition:** Energy AI Hackathon 2026

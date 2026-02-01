@@ -1,6 +1,12 @@
 # Results Summary - Energy AI Hackathon 2026
 ## Team Brain Oil - Final Submission
 
+**Team Members:**
+- Kailasadatta Boggaram
+- Jayanth Damodaran
+- Bilal Shihab
+- Carlos Fabela
+
 ---
 
 ## Model Performance
@@ -230,5 +236,5 @@ For each numerical feature, we calculate per well:
 ---
 
 **Last Updated:** February 1, 2026
-**Team:** Brain Oil
+**Team:** Brain Oil (Kailasadatta Boggaram, Jayanth Damodaran, Bilal Shihab, Carlos Fabela)
 **Competition:** Energy AI Hackathon 2026
