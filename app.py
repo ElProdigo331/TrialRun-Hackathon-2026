@@ -967,6 +967,26 @@ elif page == "5. Model Training":
         
         st.divider()
         
+        st.subheader("Uncertainty Quantification Method")
+        uncertainty_method = st.radio(
+            "Choose how to generate R1-R100 realizations:",
+            ["Residual Bootstrap", "Bagging Ensemble"],
+            horizontal=True,
+            help="Residual Bootstrap: Add random historical errors. Bagging Ensemble: Use ensemble of models trained on bootstrap samples."
+        )
+        
+        if uncertainty_method == "Bagging Ensemble":
+            st.info("""
+            **Bagging Ensemble** wraps your base model in 100 estimators, each trained on a bootstrap sample.
+            Each estimator's prediction becomes one realization (R1-R100). This captures **model uncertainty** 
+            rather than just historical error distribution.
+            """)
+            n_bagging_estimators = st.slider("Number of Bagging Estimators", 50, 200, 100, help="More = better uncertainty but slower")
+        else:
+            n_bagging_estimators = 100
+        
+        st.divider()
+        
         experiment_name = st.text_input("Experiment Name (for output file)", value=f"{model_type.replace(' ', '_')}_norm{normalize_features}_sand{sand_map_option}")
         
         if st.button("Train Model", type="primary"):
@@ -1135,6 +1155,46 @@ elif page == "5. Model Training":
                 
                 st.session_state.model = model
                 st.session_state.residuals = residuals.values
+                st.session_state.uncertainty_method = uncertainty_method
+                
+                if uncertainty_method == "Bagging Ensemble":
+                    from sklearn.ensemble import BaggingRegressor
+                    
+                    if model_type == "Random Forest":
+                        base_estimator = RandomForestRegressor(
+                            n_estimators=min(50, model.n_estimators), 
+                            max_depth=model.max_depth,
+                            min_samples_split=model.min_samples_split, 
+                            min_samples_leaf=model.min_samples_leaf,
+                            max_features=model.max_features, 
+                            random_state=42, n_jobs=-1
+                        )
+                    elif model_type == "XGBoost":
+                        base_estimator = xgb.XGBRegressor(
+                            n_estimators=min(50, model.n_estimators), 
+                            max_depth=model.max_depth,
+                            learning_rate=model.learning_rate, 
+                            random_state=42, n_jobs=-1
+                        )
+                    elif model_type == "Elastic Net":
+                        base_estimator = ElasticNet(alpha=model.alpha, l1_ratio=model.l1_ratio, random_state=42)
+                    elif model_type == "Ridge Regression":
+                        base_estimator = Ridge(alpha=model.alpha, random_state=42)
+                    else:
+                        base_estimator = LinearRegression()
+                    
+                    with st.spinner(f"Building Bagging Ensemble ({n_bagging_estimators} estimators)..."):
+                        bagging_model = BaggingRegressor(
+                            estimator=base_estimator,
+                            n_estimators=n_bagging_estimators,
+                            bootstrap=True,
+                            oob_score=True,
+                            random_state=42,
+                            n_jobs=-1
+                        )
+                        bagging_model.fit(X, y)
+                        st.session_state.bagging_model = bagging_model
+                        st.success(f"Bagging Ensemble built with OOB R² = {bagging_model.oob_score_:.4f}")
             
             st.success(f"{model_type} trained successfully!")
             
@@ -1413,6 +1473,11 @@ elif page == "6. Generate Solution":
         with col2:
             save_experiment = st.checkbox("Also save as experiment file", value=True, help="Save with experiment name for comparison")
         
+        uncertainty_method = st.session_state.get('uncertainty_method', 'Residual Bootstrap')
+        bagging_model = st.session_state.get('bagging_model', None)
+        
+        st.info(f"**Uncertainty Method:** {uncertainty_method}")
+        
         if st.button("Generate Predictions", type="primary"):
             test_df_sorted = test_df.sort_values('Well_ID').reset_index(drop=True)
             X_test = test_df_sorted[feature_cols].fillna(0)
@@ -1423,11 +1488,21 @@ elif page == "6. Generate Solution":
             
             point_predictions = model.predict(X_test)
             
-            realizations = np.zeros((len(test_df_sorted), n_realizations))
-            for i in range(n_realizations):
-                sampled_residuals = np.random.choice(residuals, size=len(test_df_sorted), replace=True)
-                realizations[:, i] = point_predictions + sampled_residuals
-                realizations[:, i] = np.maximum(realizations[:, i], 0)
+            if uncertainty_method == "Bagging Ensemble" and bagging_model is not None:
+                st.info("Generating realizations from Bagging Ensemble (each estimator = one realization)")
+                estimator_predictions = np.array([
+                    est.predict(X_test) for est in bagging_model.estimators_
+                ])
+                realizations = estimator_predictions.T
+                realizations = np.maximum(realizations, 0)
+                n_realizations = realizations.shape[1]
+                st.success(f"Generated {n_realizations} realizations from bagging estimators")
+            else:
+                realizations = np.zeros((len(test_df_sorted), n_realizations))
+                for i in range(n_realizations):
+                    sampled_residuals = np.random.choice(residuals, size=len(test_df_sorted), replace=True)
+                    realizations[:, i] = point_predictions + sampled_residuals
+                    realizations[:, i] = np.maximum(realizations[:, i], 0)
             
             solution = pd.DataFrame()
             solution['Well_ID'] = test_df_sorted['Well_ID'].astype(int).values
