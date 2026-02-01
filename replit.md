@@ -99,6 +99,26 @@ Validates if the R1-R100 prediction intervals are reliable:
 - **50% Coverage:** Should be ~50% (actual values within P25-P75 range)
 - **Calibration Plot:** Visual showing which wells are within predicted ranges
 
+### RMSE Interpretation Guide
+How to evaluate if your RMSE is good:
+
+| Baseline | Value | Purpose |
+|----------|-------|---------|
+| Target Mean | 33.4M BBL | RMSE as % of mean |
+| Target Std Dev | 14.1M BBL | Null model baseline |
+| Target Range | 8.2M - 74.0M BBL | Context for error magnitude |
+
+**Null Model:** Predicting the mean for every well gives RMSE ≈ 14.1M BBL (the standard deviation).
+
+| RMSE % of Mean | Interpretation |
+|----------------|----------------|
+| < 10% | Excellent |
+| 10-20% | Good |
+| 20-30% | Acceptable |
+| > 30% | Needs improvement |
+
+**Note:** Linear Regression may show Train MAE/RMSE = 0 when features outnumber samples (overfitting). Use Ridge or Random Forest instead.
+
 ---
 
 ## Industry Expert Insights (Incorporated)
