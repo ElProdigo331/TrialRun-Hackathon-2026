@@ -16,3 +16,4 @@ statsmodels
 markdown
 xgboost
 shap
+mlxtend

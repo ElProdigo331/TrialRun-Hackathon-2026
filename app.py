@@ -890,6 +890,83 @@ elif page == "5. Model Training":
         
         st.markdown(f"**Features available:** {len(feature_cols)}")
         
+        st.divider()
+        
+        with st.expander("🔬 Stepwise Feature Selection (Optional)", expanded=False):
+            st.markdown("""
+            **Stepwise regression** automatically selects the optimal subset of features by iteratively adding/removing 
+            variables based on cross-validation score. This can reduce overfitting and improve interpretability.
+            """)
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                stepwise_direction = st.selectbox(
+                    "Selection Direction",
+                    ["Forward", "Backward"],
+                    help="Forward: start empty, add best features. Backward: start full, remove worst features."
+                )
+            with col2:
+                stepwise_k_features = st.slider(
+                    "Target Features",
+                    min_value=3, max_value=min(30, len(feature_cols)), value=min(10, len(feature_cols)),
+                    help="Number of features to select"
+                )
+            
+            stepwise_cv = st.slider("CV Folds for Feature Selection", 3, 10, 5)
+            
+            if st.button("Run Stepwise Feature Selection", type="secondary"):
+                with st.spinner(f"Running {stepwise_direction} stepwise selection..."):
+                    try:
+                        from mlxtend.feature_selection import SequentialFeatureSelector
+                        from sklearn.linear_model import Ridge
+                        from sklearn.preprocessing import StandardScaler
+                        
+                        X_step = train_df[feature_cols].fillna(0)
+                        y_step = train_df['Target_3yr_Oil_BBL']
+                        
+                        scaler = StandardScaler()
+                        X_step_scaled = pd.DataFrame(scaler.fit_transform(X_step), columns=X_step.columns)
+                        
+                        base_model = Ridge(alpha=1.0, random_state=42)
+                        
+                        sfs = SequentialFeatureSelector(
+                            base_model,
+                            k_features=stepwise_k_features,
+                            forward=(stepwise_direction == "Forward"),
+                            floating=False,
+                            scoring='r2',
+                            cv=stepwise_cv,
+                            n_jobs=-1,
+                            verbose=0
+                        )
+                        
+                        sfs.fit(X_step_scaled, y_step)
+                        
+                        selected_features = list(sfs.k_feature_names_)
+                        st.session_state.selected_features = selected_features
+                        
+                        st.success(f"Selected {len(selected_features)} features with R² = {sfs.k_score_:.4f}")
+                        
+                        st.markdown("**Selected Features:**")
+                        for i, feat in enumerate(selected_features, 1):
+                            st.write(f"{i}. {feat}")
+                        
+                        st.info("These features will be used when you click 'Train Model' below.")
+                        
+                    except Exception as e:
+                        st.error(f"Stepwise selection failed: {str(e)}")
+            
+            if 'selected_features' in st.session_state and st.session_state.selected_features:
+                use_stepwise_features = st.checkbox(
+                    f"Use stepwise-selected features ({len(st.session_state.selected_features)} features)",
+                    value=True
+                )
+                if use_stepwise_features:
+                    feature_cols = st.session_state.selected_features
+                    st.markdown(f"**Using {len(feature_cols)} stepwise-selected features**")
+        
+        st.divider()
+        
         experiment_name = st.text_input("Experiment Name (for output file)", value=f"{model_type.replace(' ', '_')}_norm{normalize_features}_sand{sand_map_option}")
         
         if st.button("Train Model", type="primary"):
